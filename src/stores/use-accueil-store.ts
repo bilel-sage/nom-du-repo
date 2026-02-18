@@ -1,42 +1,53 @@
 "use client";
 
 import { create } from "zustand";
+import { createClient } from "@/lib/supabase/client";
 
 export interface Note {
   id: string;
   text: string;
-  createdAt: string;
-}
-
-function load(): Note[] {
-  if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem("vide-tete-notes") ?? "[]"); }
-  catch { return []; }
-}
-function save(notes: Note[]) {
-  if (typeof window !== "undefined") localStorage.setItem("vide-tete-notes", JSON.stringify(notes));
+  created_at: string;
 }
 
 interface AccueilState {
   notes: Note[];
-  addNote: (text: string) => void;
-  deleteNote: (id: string) => void;
+  loading: boolean;
+  fetchNotes: () => Promise<void>;
+  addNote: (text: string) => Promise<void>;
+  deleteNote: (id: string) => Promise<void>;
 }
 
 export const useAccueilStore = create<AccueilState>((set, get) => ({
-  notes: load(),
+  notes: [],
+  loading: false,
 
-  addNote: (text) => {
-    if (!text.trim()) return;
-    const note: Note = { id: crypto.randomUUID(), text: text.trim(), createdAt: new Date().toISOString() };
-    const notes = [note, ...get().notes];
-    set({ notes });
-    save(notes);
+  fetchNotes: async () => {
+    set({ loading: true });
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("notes")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error) set({ notes: (data ?? []) as Note[] });
+    set({ loading: false });
   },
 
-  deleteNote: (id) => {
-    const notes = get().notes.filter((n) => n.id !== id);
-    set({ notes });
-    save(notes);
+  addNote: async (text) => {
+    if (!text.trim()) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase
+      .from("notes")
+      .insert({ user_id: user.id, text: text.trim() } as any)
+      .select()
+      .single();
+    if (!error && data) set((s) => ({ notes: [data as Note, ...s.notes] }));
+  },
+
+  deleteNote: async (id) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("notes").delete().eq("id", id);
+    if (!error) set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
   },
 }));

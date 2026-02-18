@@ -1,77 +1,131 @@
 "use client";
 
 import { create } from "zustand";
+import { createClient } from "@/lib/supabase/client";
 
 export type RitualZone = "matin" | "soir";
 
 export interface RitualItem {
   id: string;
+  zone: RitualZone;
   text: string;
   done: boolean;
+  position: number;
 }
 
 type RitualsData = Record<RitualZone, RitualItem[]>;
 
-function load(): RitualsData {
-  if (typeof window === "undefined") return { matin: [], soir: [] };
-  try {
-    const raw = localStorage.getItem("rituels-data");
-    if (!raw) return { matin: [], soir: [] };
-    return JSON.parse(raw);
-  } catch { return { matin: [], soir: [] }; }
-}
-function save(data: RitualsData) {
-  if (typeof window !== "undefined") localStorage.setItem("rituels-data", JSON.stringify(data));
-}
-
 interface RituelsState {
   rituals: RitualsData;
-  addRitual: (zone: RitualZone, text: string) => void;
-  editRitual: (zone: RitualZone, id: string, text: string) => void;
-  deleteRitual: (zone: RitualZone, id: string) => void;
-  toggleRitual: (zone: RitualZone, id: string) => void;
-  resetZone: (zone: RitualZone) => void;
+  loading: boolean;
+  fetchRituals: () => Promise<void>;
+  addRitual: (zone: RitualZone, text: string) => Promise<void>;
+  editRitual: (zone: RitualZone, id: string, text: string) => Promise<void>;
+  deleteRitual: (zone: RitualZone, id: string) => Promise<void>;
+  toggleRitual: (zone: RitualZone, id: string) => Promise<void>;
+  resetZone: (zone: RitualZone) => Promise<void>;
 }
 
 export const useRituelsStore = create<RituelsState>((set, get) => ({
-  rituals: load(),
+  rituals: { matin: [], soir: [] },
+  loading: false,
 
-  addRitual: (zone, text) => {
+  fetchRituals: async () => {
+    set({ loading: true });
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("rituels")
+      .select("*")
+      .order("position", { ascending: true });
+    if (!error && data) {
+      const items = data as RitualItem[];
+      set({
+        rituals: {
+          matin: items.filter((r) => r.zone === "matin"),
+          soir:  items.filter((r) => r.zone === "soir"),
+        },
+      });
+    }
+    set({ loading: false });
+  },
+
+  addRitual: async (zone, text) => {
     if (!text.trim()) return;
-    const item: RitualItem = { id: crypto.randomUUID(), text: text.trim(), done: false };
-    const rituals = { ...get().rituals, [zone]: [...get().rituals[zone], item] };
-    set({ rituals });
-    save(rituals);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const position = get().rituals[zone].length;
+    const { data, error } = await supabase
+      .from("rituels")
+      .insert({ user_id: user.id, zone, text: text.trim(), done: false, position } as any)
+      .select()
+      .single();
+    if (!error && data) {
+      const item = data as RitualItem;
+      set((s) => ({ rituals: { ...s.rituals, [zone]: [...s.rituals[zone], item] } }));
+    }
   },
 
-  editRitual: (zone, id, text) => {
+  editRitual: async (zone, id, text) => {
     if (!text.trim()) return;
-    const rituals = {
-      ...get().rituals,
-      [zone]: get().rituals[zone].map((r) => r.id === id ? { ...r, text: text.trim() } : r),
-    };
-    set({ rituals });
-    save(rituals);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("rituels")
+      .update({ text: text.trim() } as any)
+      .eq("id", id);
+    if (!error) {
+      set((s) => ({
+        rituals: {
+          ...s.rituals,
+          [zone]: s.rituals[zone].map((r) => r.id === id ? { ...r, text: text.trim() } : r),
+        },
+      }));
+    }
   },
 
-  deleteRitual: (zone, id) => {
-    const rituals = { ...get().rituals, [zone]: get().rituals[zone].filter((r) => r.id !== id) };
-    set({ rituals });
-    save(rituals);
+  deleteRitual: async (zone, id) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("rituels").delete().eq("id", id);
+    if (!error) {
+      set((s) => ({
+        rituals: { ...s.rituals, [zone]: s.rituals[zone].filter((r) => r.id !== id) },
+      }));
+    }
   },
 
-  toggleRitual: (zone, id) => {
-    const rituals = {
-      ...get().rituals,
-      [zone]: get().rituals[zone].map((r) => r.id === id ? { ...r, done: !r.done } : r),
-    };
-    set({ rituals });
-    save(rituals);
+  toggleRitual: async (zone, id) => {
+    const ritual = get().rituals[zone].find((r) => r.id === id);
+    if (!ritual) return;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("rituels")
+      .update({ done: !ritual.done } as any)
+      .eq("id", id);
+    if (!error) {
+      set((s) => ({
+        rituals: {
+          ...s.rituals,
+          [zone]: s.rituals[zone].map((r) => r.id === id ? { ...r, done: !r.done } : r),
+        },
+      }));
+    }
   },
 
-  resetZone: (zone) => {
-    const rituals = { ...get().rituals, [zone]: get().rituals[zone].map((r) => ({ ...r, done: false })) };
-    set({ rituals });
-    save(rituals);
+  resetZone: async (zone) => {
+    const supabase = createClient();
+    const ids = get().rituals[zone].map((r) => r.id);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("rituels")
+      .update({ done: false } as any)
+      .in("id", ids);
+    if (!error) {
+      set((s) => ({
+        rituals: {
+          ...s.rituals,
+          [zone]: s.rituals[zone].map((r) => ({ ...r, done: false })),
+        },
+      }));
+    }
   },
 }));

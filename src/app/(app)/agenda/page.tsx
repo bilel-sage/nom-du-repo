@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useAgendaStore,
   AGENDA_DAYS,
@@ -293,6 +293,9 @@ const AGENDAS = [
 ];
 
 export default function AgendaPage() {
+  const fetchTasks = useAgendaStore((s) => s.fetchTasks);
+  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
   const [active, setActive] = useState<AgendaType>("ecole");
   const current = AGENDAS.find((a) => a.id === active)!;
 
