@@ -53,9 +53,9 @@ export default function LoginPage() {
               <Zap className="w-7 h-7" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Eclipse</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Biproductive</h1>
           <p className="text-sm text-muted-foreground">
-            Connectez-vous à votre cockpit
+            Connectez-vous à votre espace
           </p>
         </div>
 

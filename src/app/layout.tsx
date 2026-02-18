@@ -14,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eclipse — Cockpit de Productivité",
-  description: "Votre cockpit ultime pour le développement intellectuel gamifié.",
+  title: "Biproductive",
+  description: "Votre système personnel de productivité.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

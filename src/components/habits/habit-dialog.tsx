@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHabitStore, type HabitInsert } from "@/stores/use-habit-store";
+import { useHabitStore, FIXED_CATEGORIES, type HabitInsert } from "@/stores/use-habit-store";
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,30 +26,37 @@ const COLOR_OPTIONS = [
   { value: "#ec4899", label: "Rose" },
 ];
 
-const STAT_OPTIONS = [
-  { value: "none", label: "Aucune" },
-  { value: "eloquence", label: "Éloquence" },
-  { value: "force", label: "Force" },
-  { value: "agilite", label: "Agilité" },
-];
+interface HabitDialogProps {
+  defaultCategory?: string;
+  trigger?: React.ReactNode;
+}
 
-export function HabitDialog() {
+export function HabitDialog({ defaultCategory, trigger }: HabitDialogProps) {
   const addHabit = useHabitStore((s) => s.addHabit);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState("");
 
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#6366f1");
-  const [statType, setStatType] = useState("none");
-  const [xpPerCheck, setXpPerCheck] = useState("5");
+  const [color, setColor] = useState<string>(
+    defaultCategory
+      ? (FIXED_CATEGORIES.find((c) => c.id === defaultCategory)?.color ?? "#6366f1")
+      : "#6366f1"
+  );
 
   const resetForm = () => {
     setName("");
-    setColor("#6366f1");
-    setStatType("none");
-    setXpPerCheck("5");
+    setColor(
+      defaultCategory
+        ? (FIXED_CATEGORIES.find((c) => c.id === defaultCategory)?.color ?? "#6366f1")
+        : "#6366f1"
+    );
     setLocalError("");
+  };
+
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v);
+    if (!v) resetForm();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,8 +68,7 @@ export function HabitDialog() {
     const habit: HabitInsert = {
       name: name.trim(),
       color,
-      stat_type: statType === "none" ? null : (statType as "eloquence" | "force" | "agilite"),
-      xp_per_check: parseInt(xpPerCheck) || 5,
+      category: defaultCategory,
     };
 
     await addHabit(habit);
@@ -86,23 +85,29 @@ export function HabitDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-1.5">
-          <Plus className="w-4 h-4" />
-          Nouvelle habitude
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="ghost" className="gap-1 h-7 px-2 text-muted-foreground hover:text-foreground">
+            <Plus className="w-3.5 h-3.5" />
+            Ajouter
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Nouvelle habitude</DialogTitle>
+          <DialogTitle>
+            {defaultCategory
+              ? `Nouvelle habitude — ${FIXED_CATEGORIES.find((c) => c.id === defaultCategory)?.label}`
+              : "Nouvelle habitude"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label htmlFor="h-name">Nom</Label>
+            <Label htmlFor="h-name">Nom de l'habitude</Label>
             <Input
               id="h-name"
-              placeholder="Ex: Méditation 10min"
+              placeholder="Ex: Lecture 20min"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -110,7 +115,6 @@ export function HabitDialog() {
             />
           </div>
 
-          {/* Color picker */}
           <div className="space-y-2">
             <Label>Couleur</Label>
             <div className="flex gap-2 flex-wrap">
@@ -119,42 +123,14 @@ export function HabitDialog() {
                   key={c.value}
                   type="button"
                   onClick={() => setColor(c.value)}
-                  className={cn(
-                    "w-8 h-8 rounded-full transition-all",
-                    color === c.value ? "scale-110" : "hover:scale-105"
-                  )}
+                  className={cn("w-7 h-7 rounded-full transition-all", color === c.value ? "scale-110" : "hover:scale-105")}
                   style={{
                     backgroundColor: c.value,
-                    boxShadow: color === c.value ? `0 0 0 2px var(--color-background), 0 0 0 4px ${c.value}` : undefined,
+                    boxShadow: color === c.value ? `0 0 0 2px var(--color-background), 0 0 0 3px ${c.value}` : undefined,
                   }}
                   title={c.label}
                 />
               ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Stat liée</Label>
-              <Select value={statType} onValueChange={setStatType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STAT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="h-xp">XP par check</Label>
-              <Input
-                id="h-xp"
-                type="number"
-                min={1}
-                max={50}
-                value={xpPerCheck}
-                onChange={(e) => setXpPerCheck(e.target.value)}
-              />
             </div>
           </div>
 
@@ -164,12 +140,12 @@ export function HabitDialog() {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Créer l'habitude"}
+            <Button type="submit" size="sm" disabled={loading || !name.trim()}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Créer"}
             </Button>
           </div>
         </form>

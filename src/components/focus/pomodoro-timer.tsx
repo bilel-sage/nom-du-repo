@@ -1,6 +1,6 @@
 "use client";
 
-import { useFocusStore, type TimerPhase } from "@/stores/use-focus-store";
+import { type TimerPhase, type FocusZone, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -41,14 +41,18 @@ function getPhaseRingColor(phase: TimerPhase): string {
   }
 }
 
-export function PomodoroTimer() {
+interface PomodoroTimerProps {
+  zone: FocusZone;
+}
+
+export function PomodoroTimer({ zone }: PomodoroTimerProps) {
+  const useStore = useFocusStoreByZone(zone);
   const {
     phase, secondsLeft, currentRound, totalRounds,
     isRunning, workDuration, breakDuration, longBreakDuration,
     start, pause, reset, skip,
-  } = useFocusStore();
+  } = useStore();
 
-  // Calculate progress for the circular ring
   const totalSeconds =
     phase === "work" ? workDuration * 60
     : phase === "break" ? breakDuration * 60
@@ -57,7 +61,6 @@ export function PomodoroTimer() {
 
   const progress = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;
 
-  // SVG circle dimensions
   const size = 280;
   const strokeWidth = 6;
   const radius = (size - strokeWidth) / 2;
@@ -66,12 +69,10 @@ export function PomodoroTimer() {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      {/* Phase label */}
       <div className={cn("text-sm font-semibold uppercase tracking-widest", getPhaseColor(phase))}>
         {getPhaseLabel(phase)}
       </div>
 
-      {/* Circular timer */}
       <div className="relative" style={{ width: size, height: size }}>
         <svg
           width={size}
@@ -79,7 +80,6 @@ export function PomodoroTimer() {
           className="-rotate-90"
           viewBox={`0 0 ${size} ${size}`}
         >
-          {/* Background ring */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -89,7 +89,6 @@ export function PomodoroTimer() {
             className="text-border"
             strokeWidth={strokeWidth}
           />
-          {/* Progress ring */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -103,7 +102,6 @@ export function PomodoroTimer() {
           />
         </svg>
 
-        {/* Center content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-6xl font-mono font-bold tracking-tight tabular-nums">
             {formatTime(secondsLeft)}
@@ -114,7 +112,6 @@ export function PomodoroTimer() {
         </div>
       </div>
 
-      {/* Round dots */}
       <div className="flex items-center gap-2">
         {Array.from({ length: totalRounds }).map((_, i) => (
           <div
@@ -131,7 +128,6 @@ export function PomodoroTimer() {
         ))}
       </div>
 
-      {/* Controls */}
       <div className="flex items-center gap-3">
         <Button
           variant="outline"

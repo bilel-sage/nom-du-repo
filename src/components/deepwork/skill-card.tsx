@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Square, Trash2, Zap, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getSkillTitleColor } from "@/lib/gamification";
+function getSkillTitleColor(totalMinutes: number): string {
+  const hours = totalMinutes / 60;
+  if (hours >= 500) return "text-amber-400";
+  if (hours >= 200) return "text-purple-400";
+  if (hours >= 100) return "text-blue-400";
+  if (hours >= 50) return "text-emerald-400";
+  return "text-muted-foreground";
+}
 
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);

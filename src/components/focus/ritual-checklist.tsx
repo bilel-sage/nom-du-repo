@@ -1,6 +1,6 @@
 "use client";
 
-import { useFocusStore } from "@/stores/use-focus-store";
+import { type FocusZone, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -10,6 +10,9 @@ import {
   Target,
   Headphones,
   CheckCircle2,
+  BookOpen,
+  NotebookPen,
+  Code,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +22,18 @@ const iconMap: Record<string, React.ElementType> = {
   "app-window": AppWindow,
   "target": Target,
   "headphones": Headphones,
+  "book-open": BookOpen,
+  "notebook-pen": NotebookPen,
+  "code": Code,
 };
 
-export function RitualChecklist() {
-  const { rituals, allRitualsChecked, toggleRitual } = useFocusStore();
+interface RitualChecklistProps {
+  zone: FocusZone;
+}
+
+export function RitualChecklist({ zone }: RitualChecklistProps) {
+  const useStore = useFocusStoreByZone(zone);
+  const { rituals, allRitualsChecked, toggleRitual } = useStore();
 
   const checkedCount = rituals.filter((r) => r.checked).length;
   const progressPercent = (checkedCount / rituals.length) * 100;
@@ -31,7 +42,7 @@ export function RitualChecklist() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Rituel de concentration
+          Rituel {zone === "matin" ? "du matin" : "du soir"}
         </h3>
         {allRitualsChecked && (
           <span className="flex items-center gap-1 text-xs font-medium text-emerald-500">

@@ -3,6 +3,33 @@
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
 
+// ─── Fixed categories ────────────────────────────────────────────────────────
+export const FIXED_CATEGORIES = [
+  { id: "intellectuel", label: "Intellectuel", color: "#6366f1" },
+  { id: "business",     label: "Business",     color: "#f59e0b" },
+  { id: "islam",        label: "Islam",         color: "#10b981" },
+  { id: "sport",        label: "Sport",         color: "#3b82f6" },
+  { id: "beaute",       label: "Beauté",        color: "#ec4899" },
+] as const;
+
+export type CategoryId = (typeof FIXED_CATEGORIES)[number]["id"];
+
+// ─── localStorage helpers for category mapping ───────────────────────────────
+function loadCategoryMap(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("habit-categories") ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveCategoryMap(map: Record<string, string>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("habit-categories", JSON.stringify(map));
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 export interface Habit {
   id: string;
   user_id: string;
@@ -24,9 +51,11 @@ export interface HabitLog {
 }
 
 export type HabitInsert = Pick<Habit, "name"> &
-  Partial<Pick<Habit, "icon" | "color" | "xp_per_check" | "stat_type">>;
+  Partial<Pick<Habit, "icon" | "color" | "xp_per_check" | "stat_type">> & {
+    category?: string;
+  };
 
-// Returns last 7 dates as YYYY-MM-DD strings
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 function getLast7Days(): string[] {
   const days: string[] = [];
   for (let i = 6; i >= 0; i--) {
@@ -41,51 +70,43 @@ function getToday(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-// Calculate streak from logs (consecutive days ending today or yesterday)
 function calculateStreak(logs: HabitLog[]): number {
-  const doneDates = new Set(
-    logs.filter((l) => l.is_done).map((l) => l.date)
-  );
-
+  const doneDates = new Set(logs.filter((l) => l.is_done).map((l) => l.date));
   let streak = 0;
   const today = new Date();
-
-  // Check if today is done, otherwise start from yesterday
   const todayStr = today.toISOString().split("T")[0];
-  if (!doneDates.has(todayStr)) {
-    today.setDate(today.getDate() - 1);
-  }
-
+  if (!doneDates.has(todayStr)) today.setDate(today.getDate() - 1);
   for (let i = 0; i < 365; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    if (doneDates.has(dateStr)) {
-      streak++;
-    } else {
-      break;
-    }
+    if (doneDates.has(dateStr)) streak++;
+    else break;
   }
-
   return streak;
 }
 
+// ─── Store ───────────────────────────────────────────────────────────────────
 interface HabitState {
   habits: Habit[];
   logs: HabitLog[];
   loading: boolean;
   error: string | null;
+  categoryMap: Record<string, string>;
 
   fetchHabits: () => Promise<void>;
   fetchLogs: (days?: number) => Promise<void>;
   addHabit: (habit: HabitInsert) => Promise<void>;
+  updateHabit: (id: string, updates: Partial<Pick<Habit, "name" | "color">>) => Promise<void>;
   deleteHabit: (id: string) => Promise<void>;
   toggleDay: (habitId: string, date: string) => Promise<void>;
+  setHabitCategory: (habitId: string, categoryId: string) => void;
 
   // Computed helpers
   getStreakForHabit: (habitId: string) => number;
   isChecked: (habitId: string, date: string) => boolean;
   getWeekProgress: (habitId: string) => number;
+  getHabitsByCategory: (categoryId: string) => Habit[];
 }
 
 export const useHabitStore = create<HabitState>((set, get) => ({
@@ -93,6 +114,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   logs: [],
   loading: false,
   error: null,
+  categoryMap: loadCategoryMap(),
 
   fetchHabits: async () => {
     set({ loading: true, error: null });
@@ -115,16 +137,11 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     const since = new Date();
     since.setDate(since.getDate() - days);
     const sinceStr = since.toISOString().split("T")[0];
-
     const { data, error } = await supabase
       .from("habit_logs")
       .select("*")
       .gte("date", sinceStr);
-
-    if (error) {
-      set({ error: error.message });
-      return;
-    }
+    if (error) { set({ error: error.message }); return; }
     set({ logs: (data ?? []) as HabitLog[] });
   },
 
@@ -148,11 +165,29 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       .select()
       .single();
 
-    if (error) {
-      set({ error: error.message });
-      return;
+    if (error) { set({ error: error.message }); return; }
+
+    const created = data as Habit;
+    set((s) => ({ habits: [...s.habits, created] }));
+
+    // Store category in localStorage
+    if (habit.category) {
+      const newMap = { ...get().categoryMap, [created.id]: habit.category };
+      set({ categoryMap: newMap });
+      saveCategoryMap(newMap);
     }
-    set((s) => ({ habits: [...s.habits, data as Habit] }));
+  },
+
+  updateHabit: async (id, updates) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("habits")
+      .update(updates as any)
+      .eq("id", id);
+    if (error) { set({ error: error.message }); return; }
+    set((s) => ({
+      habits: s.habits.map((h) => (h.id === id ? { ...h, ...updates } : h)),
+    }));
   },
 
   deleteHabit: async (id) => {
@@ -161,12 +196,15 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       .from("habits")
       .update({ is_active: false } as any)
       .eq("id", id);
+    if (error) { set({ error: error.message }); return; }
 
-    if (error) {
-      set({ error: error.message });
-      return;
-    }
-    set((s) => ({ habits: s.habits.filter((h) => h.id !== id) }));
+    const newMap = { ...get().categoryMap };
+    delete newMap[id];
+    set((s) => ({
+      habits: s.habits.filter((h) => h.id !== id),
+      categoryMap: newMap,
+    }));
+    saveCategoryMap(newMap);
   },
 
   toggleDay: async (habitId, date) => {
@@ -177,106 +215,69 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     if (!user) return;
 
     if (existing) {
-      // Toggle existing log
       const newDone = !existing.is_done;
       const { error } = await supabase
         .from("habit_logs")
         .update({ is_done: newDone } as any)
         .eq("id", existing.id);
-
-      if (error) {
-        set({ error: error.message });
-        return;
-      }
-
+      if (error) { set({ error: error.message }); return; }
       set((s) => ({
-        logs: s.logs.map((l) =>
-          l.id === existing.id ? { ...l, is_done: newDone } : l
-        ),
+        logs: s.logs.map((l) => (l.id === existing.id ? { ...l, is_done: newDone } : l)),
       }));
 
-      // XP logic
       const habit = get().habits.find((h) => h.id === habitId);
       if (habit && newDone) {
         await supabase.from("xp_logs").insert({
-          user_id: user.id,
-          amount: habit.xp_per_check,
-          source_type: "habit",
-          source_id: habitId,
-          stat_type: habit.stat_type,
+          user_id: user.id, amount: habit.xp_per_check,
+          source_type: "habit", source_id: habitId, stat_type: habit.stat_type,
         } as any);
-
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: profile } = await supabase.from("profiles")
           .select("total_xp, stat_eloquence, stat_force, stat_agilite")
-          .eq("id", user.id)
-          .single();
-
+          .eq("id", user.id).single();
         if (profile) {
-          const updates: Record<string, number> = {
-            total_xp: (profile as any).total_xp + habit.xp_per_check,
-          };
-          if (habit.stat_type === "eloquence") updates.stat_eloquence = (profile as any).stat_eloquence + habit.xp_per_check;
-          if (habit.stat_type === "force") updates.stat_force = (profile as any).stat_force + habit.xp_per_check;
-          if (habit.stat_type === "agilite") updates.stat_agilite = (profile as any).stat_agilite + habit.xp_per_check;
-
-          await supabase.from("profiles").update(updates as any).eq("id", user.id);
+          const u: Record<string, number> = { total_xp: (profile as any).total_xp + habit.xp_per_check };
+          if (habit.stat_type === "eloquence") u.stat_eloquence = (profile as any).stat_eloquence + habit.xp_per_check;
+          if (habit.stat_type === "force") u.stat_force = (profile as any).stat_force + habit.xp_per_check;
+          if (habit.stat_type === "agilite") u.stat_agilite = (profile as any).stat_agilite + habit.xp_per_check;
+          await supabase.from("profiles").update(u as any).eq("id", user.id);
         }
       }
     } else {
-      // Create new log
-      const { data, error } = await supabase
-        .from("habit_logs")
-        .insert({
-          habit_id: habitId,
-          user_id: user.id,
-          date,
-          is_done: true,
-        } as any)
-        .select()
-        .single();
-
-      if (error) {
-        set({ error: error.message });
-        return;
-      }
+      const { data, error } = await supabase.from("habit_logs")
+        .insert({ habit_id: habitId, user_id: user.id, date, is_done: true } as any)
+        .select().single();
+      if (error) { set({ error: error.message }); return; }
       set((s) => ({ logs: [...s.logs, data as HabitLog] }));
 
-      // XP logic
       const habit = get().habits.find((h) => h.id === habitId);
       if (habit) {
         await supabase.from("xp_logs").insert({
-          user_id: user.id,
-          amount: habit.xp_per_check,
-          source_type: "habit",
-          source_id: habitId,
-          stat_type: habit.stat_type,
+          user_id: user.id, amount: habit.xp_per_check,
+          source_type: "habit", source_id: habitId, stat_type: habit.stat_type,
         } as any);
-
-        const { data: profile } = await supabase
-          .from("profiles")
+        const { data: profile } = await supabase.from("profiles")
           .select("total_xp, stat_eloquence, stat_force, stat_agilite")
-          .eq("id", user.id)
-          .single();
-
+          .eq("id", user.id).single();
         if (profile) {
-          const updates: Record<string, number> = {
-            total_xp: (profile as any).total_xp + habit.xp_per_check,
-          };
-          if (habit.stat_type === "eloquence") updates.stat_eloquence = (profile as any).stat_eloquence + habit.xp_per_check;
-          if (habit.stat_type === "force") updates.stat_force = (profile as any).stat_force + habit.xp_per_check;
-          if (habit.stat_type === "agilite") updates.stat_agilite = (profile as any).stat_agilite + habit.xp_per_check;
-
-          await supabase.from("profiles").update(updates as any).eq("id", user.id);
+          const u: Record<string, number> = { total_xp: (profile as any).total_xp + habit.xp_per_check };
+          if (habit.stat_type === "eloquence") u.stat_eloquence = (profile as any).stat_eloquence + habit.xp_per_check;
+          if (habit.stat_type === "force") u.stat_force = (profile as any).stat_force + habit.xp_per_check;
+          if (habit.stat_type === "agilite") u.stat_agilite = (profile as any).stat_agilite + habit.xp_per_check;
+          await supabase.from("profiles").update(u as any).eq("id", user.id);
         }
       }
     }
   },
 
+  setHabitCategory: (habitId, categoryId) => {
+    const newMap = { ...get().categoryMap, [habitId]: categoryId };
+    set({ categoryMap: newMap });
+    saveCategoryMap(newMap);
+  },
+
   getStreakForHabit: (habitId) => {
     const { logs } = get();
-    const habitLogs = logs.filter((l) => l.habit_id === habitId);
-    return calculateStreak(habitLogs);
+    return calculateStreak(logs.filter((l) => l.habit_id === habitId));
   },
 
   isChecked: (habitId, date) => {
@@ -287,10 +288,12 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   getWeekProgress: (habitId) => {
     const days = getLast7Days();
     const { logs } = get();
-    const count = days.filter((d) =>
-      logs.some((l) => l.habit_id === habitId && l.date === d && l.is_done)
-    ).length;
-    return count;
+    return days.filter((d) => logs.some((l) => l.habit_id === habitId && l.date === d && l.is_done)).length;
+  },
+
+  getHabitsByCategory: (categoryId) => {
+    const { habits, categoryMap } = get();
+    return habits.filter((h) => categoryMap[h.id] === categoryId);
   },
 }));
 

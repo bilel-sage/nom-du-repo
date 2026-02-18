@@ -1,123 +1,138 @@
 "use client";
 
-import { useEffect } from "react";
-import { useDashboardStore } from "@/stores/use-dashboard-store";
-import { LayoutDashboard, Swords, Flame, Timer, Zap, Loader2 } from "lucide-react";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { RpgStats } from "@/components/dashboard/rpg-stats";
-import { DailyQuests } from "@/components/dashboard/daily-quests";
-import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
-import { HabitStreak } from "@/components/dashboard/habit-streak";
+import { useState } from "react";
+import { useAccueilStore } from "@/stores/use-accueil-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Trash2, Home, Brain, Loader2 } from "lucide-react";
 
-function formatMinutes(min: number): string {
-  if (min < 60) return `${min}min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function DashboardPage() {
-  const {
-    profile, quests, habits, habitLogs, deepworkSessions, xpLogs,
-    loading, error, fetchAll,
-    todayXp, todayDeepworkMinutes, bestStreak,
-  } = useDashboardStore();
+function NouvelleNoteDialog() {
+  const addNote = useAccueilStore((s) => s.addNote);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
-
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-        <div className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-3 max-w-md">
-          {error ?? "Profil introuvable. Vérifiez que la migration SQL (002) a été exécutée dans Supabase."}
-        </div>
-        <button
-          onClick={() => fetchAll()}
-          className="text-sm text-primary hover:underline font-medium"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
-  }
-
-  const todayDw = todayDeepworkMinutes();
-  const todayXpVal = todayXp();
-  const streak = bestStreak();
-  const activeQuests = quests.filter((q) => !q.is_completed).length;
+  const submit = () => {
+    if (!text.trim()) return;
+    addNote(text);
+    setText("");
+    setOpen(false);
+  };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="w-4 h-4" />
+          Nouvelle pensée
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Vide-Tête</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
+          <Textarea
+            autoFocus
+            placeholder="Écris ta pensée, ton idée, ce qui t'occupe l'esprit…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={5}
+            className="resize-none"
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(); }}
+          />
+          <p className="text-xs text-muted-foreground">Ctrl + Entrée pour enregistrer</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button onClick={submit} disabled={!text.trim()}>Enregistrer</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function AccueilPage() {
+  const { notes, deleteNote } = useAccueilStore();
+
+  return (
+    <div className="space-y-8 max-w-3xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <LayoutDashboard className="w-6 h-6 text-primary" />
-          Cockpit
+          <Home className="w-6 h-6 text-primary" />
+          Accueil
         </h1>
-        <p className="text-muted-foreground mt-1">
-          {greeting} <strong>{profile.username}</strong>, prêt à conquérir cette journée.
+      </div>
+
+      {/* Citation motivante */}
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-8 text-center">
+        <p className="text-lg font-semibold leading-relaxed text-foreground">
+          "Tout est possible à celui qui prie, patiente, et n'abandonne jamais."
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Quêtes actives"
-          value={`${activeQuests}`}
-          subtitle={activeQuests === 0 ? "Tout est fait !" : `${activeQuests} en cours`}
-          icon={Swords}
-          accent="text-primary"
-        />
-        <StatCard
-          title="Meilleur streak"
-          value={streak > 0 ? `${streak}j` : "—"}
-          subtitle={streak > 0 ? "Jours consécutifs" : "Aucun streak"}
-          icon={Flame}
-          accent="text-amber-500"
-        />
-        <StatCard
-          title="Deepwork"
-          value={todayDw > 0 ? formatMinutes(todayDw) : "—"}
-          subtitle="Aujourd'hui"
-          icon={Timer}
-          accent="text-blue-500"
-        />
-        <StatCard
-          title="XP aujourd'hui"
-          value={todayXpVal > 0 ? `+${todayXpVal}` : "0"}
-          subtitle={`Total : ${profile.total_xp.toLocaleString()} XP`}
-          icon={Zap}
-          accent="text-primary"
-        />
-      </div>
-
-      {/* Main grid */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        {/* Left */}
-        <div className="space-y-6">
-          <DailyQuests quests={quests} />
-          <ActivityHeatmap sessions={deepworkSessions} />
+      {/* Vide-Tête */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain className="w-5 h-5 text-primary" />
+            <h2 className="text-base font-semibold">Vide-Tête</h2>
+            {notes.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {notes.length}
+              </span>
+            )}
+          </div>
+          <NouvelleNoteDialog />
         </div>
 
-        {/* Right */}
-        <div className="space-y-6">
-          <RpgStats profile={profile} />
-          <HabitStreak habits={habits} logs={habitLogs} />
-        </div>
+        {notes.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card py-12 text-center">
+            <Brain className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Aucune pensée enregistrée.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cliquez sur "Nouvelle pensée" pour vider votre tête.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="group flex items-start gap-3 rounded-xl border border-border bg-card px-4 py-4 hover:border-border/80 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    {note.text}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    {formatDate(note.createdAt)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteNote(note.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 shrink-0 mt-0.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
