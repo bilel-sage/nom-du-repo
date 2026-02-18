@@ -15,6 +15,8 @@ import {
   Lightbulb,
   Sun,
   Moon,
+  CheckSquare,
+  BookOpenText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -38,6 +40,7 @@ const NAV_GROUPS = [
     label: "Organisation",
     items: [
       { href: "/habits", label: "Habitudes", icon: CalendarCheck },
+      { href: "/todo", label: "To Do", icon: CheckSquare },
       { href: "/agenda", label: "Agenda", icon: CalendarDays },
       { href: "/objectifs", label: "Objectifs", icon: Target },
       { href: "/idees", label: "Idées Business", icon: Lightbulb },
@@ -46,9 +49,15 @@ const NAV_GROUPS = [
   {
     label: "Focus",
     items: [
-      { href: "/deepwork", label: "Deepwork", icon: Timer },
+      { href: "/do-it-now", label: "Do It Now", icon: Timer },
       { href: "/focus/matin", label: "Focus Matin", icon: Sunrise },
       { href: "/focus/soir", label: "Focus Soir", icon: Sunset },
+    ],
+  },
+  {
+    label: "Apprentissage",
+    items: [
+      { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
     ],
   },
 ];

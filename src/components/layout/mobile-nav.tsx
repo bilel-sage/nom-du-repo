@@ -15,6 +15,8 @@ import {
   Lightbulb,
   Sun,
   Moon,
+  CheckSquare,
+  BookOpenText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -27,12 +29,14 @@ const ALL_NAV = [
   { href: "/rituels/matin", label: "Rituels Matin",  icon: Sun },
   { href: "/rituels/soir",  label: "Rituels Soir",   icon: Moon },
   { href: "/habits",        label: "Habitudes",      icon: CalendarCheck },
+  { href: "/todo",          label: "To Do",          icon: CheckSquare },
   { href: "/agenda",        label: "Agenda",         icon: CalendarDays },
   { href: "/objectifs",     label: "Objectifs",      icon: Target },
   { href: "/idees",         label: "Idées Business", icon: Lightbulb },
-  { href: "/deepwork",      label: "Deepwork",       icon: Timer },
+  { href: "/do-it-now",     label: "Do It Now",      icon: Timer },
   { href: "/focus/matin",   label: "Focus Matin",    icon: Sunrise },
   { href: "/focus/soir",    label: "Focus Soir",     icon: Sunset },
+  { href: "/bilearning",    label: "Bilearning",     icon: BookOpenText },
 ];
 
 // Bottom tab bar — 5 most used

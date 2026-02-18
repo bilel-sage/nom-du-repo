@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useHabitStore } from "@/stores/use-habit-store";
 import { HabitTracker } from "@/components/habits/habit-tracker";
-import { HabitStats } from "@/components/habits/habit-stats";
 import { CalendarCheck, Loader2 } from "lucide-react";
 
 export default function HabitsPage() {
@@ -31,10 +30,7 @@ export default function HabitsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <>
-          <HabitStats />
-          <HabitTracker />
-        </>
+        <HabitTracker />
       )}
     </div>
   );

@@ -8,63 +8,99 @@ export type FocusZone = "matin" | "soir";
 export interface Ritual {
   id: string;
   label: string;
-  icon: string;
   checked: boolean;
 }
 
-const MATIN_RITUALS: Ritual[] = [
-  { id: "m1", label: "Préparer notes et cahier", icon: "notebook-pen", checked: false },
-  { id: "m2", label: "Ouvrir ressources théoriques", icon: "book-open", checked: false },
-  { id: "m3", label: "Relire objectifs d'apprentissage", icon: "target", checked: false },
-  { id: "m4", label: "Couper notifications", icon: "smartphone-off", checked: false },
-  { id: "m5", label: "Mettre un casque / musique de focus", icon: "headphones", checked: false },
+// ─── localStorage helpers ────────────────────────────────────────────────────
+
+const DEFAULT_MATIN: Omit<Ritual, "checked">[] = [
+  { id: "m1", label: "Préparer notes et cahier" },
+  { id: "m2", label: "Ouvrir ressources théoriques" },
+  { id: "m3", label: "Relire objectifs d'apprentissage" },
+  { id: "m4", label: "Couper notifications" },
+  { id: "m5", label: "Mettre un casque / musique de focus" },
 ];
 
-const SOIR_RITUALS: Ritual[] = [
-  { id: "s1", label: "Ouvrir IDE / environnement de travail", icon: "code", checked: false },
-  { id: "s2", label: "Relire les notes du matin", icon: "notebook-pen", checked: false },
-  { id: "s3", label: "Préparer exercices / projet", icon: "target", checked: false },
-  { id: "s4", label: "Couper notifications", icon: "smartphone-off", checked: false },
-  { id: "s5", label: "Mettre un casque / musique de focus", icon: "headphones", checked: false },
+const DEFAULT_SOIR: Omit<Ritual, "checked">[] = [
+  { id: "s1", label: "Ouvrir IDE / environnement de travail" },
+  { id: "s2", label: "Relire les notes du matin" },
+  { id: "s3", label: "Préparer exercices / projet" },
+  { id: "s4", label: "Couper notifications" },
+  { id: "s5", label: "Mettre un casque / musique de focus" },
 ];
+
+function loadRituals(zone: FocusZone): Ritual[] {
+  if (typeof window === "undefined") return toRituals(zone === "matin" ? DEFAULT_MATIN : DEFAULT_SOIR);
+  try {
+    const raw = localStorage.getItem(`focus-rituals-${zone}`);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Omit<Ritual, "checked">[];
+      return parsed.map((r) => ({ ...r, checked: false }));
+    }
+  } catch {}
+  return toRituals(zone === "matin" ? DEFAULT_MATIN : DEFAULT_SOIR);
+}
+
+function saveRituals(zone: FocusZone, rituals: Ritual[]) {
+  if (typeof window === "undefined") return;
+  const data = rituals.map(({ id, label }) => ({ id, label }));
+  localStorage.setItem(`focus-rituals-${zone}`, JSON.stringify(data));
+}
+
+function toRituals(items: Omit<Ritual, "checked">[]): Ritual[] {
+  return items.map((r) => ({ ...r, checked: false }));
+}
+
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// ─── Store state ─────────────────────────────────────────────────────────────
 
 export interface FocusState {
-  // Timer settings
   workDuration: number;
   breakDuration: number;
   longBreakDuration: number;
   totalRounds: number;
 
-  // Timer state
   phase: TimerPhase;
   secondsLeft: number;
   currentRound: number;
   isRunning: boolean;
   intervalId: ReturnType<typeof setInterval> | null;
 
-  // Rituals
   rituals: Ritual[];
   allRitualsChecked: boolean;
 
-  // Actions — settings
+  // Timer settings
   setWorkDuration: (min: number) => void;
   setBreakDuration: (min: number) => void;
   setLongBreakDuration: (min: number) => void;
   setTotalRounds: (rounds: number) => void;
 
-  // Actions — timer
+  // Timer actions
   start: () => void;
   pause: () => void;
   reset: () => void;
   skip: () => void;
   tick: () => void;
 
-  // Actions — rituals
+  // Ritual checklist
   toggleRitual: (id: string) => void;
   resetRituals: () => void;
+
+  // Ritual CRUD
+  addRitual: (label: string) => void;
+  editRitual: (id: string, label: string) => void;
+  removeRitual: (id: string) => void;
 }
 
-function getPhaseSeconds(phase: TimerPhase, state: Pick<FocusState, "workDuration" | "breakDuration" | "longBreakDuration">): number {
+// ─── Helper functions ─────────────────────────────────────────────────────────
+
+function getPhaseSeconds(
+  phase: TimerPhase,
+  state: Pick<FocusState, "workDuration" | "breakDuration" | "longBreakDuration">
+): number {
   switch (phase) {
     case "work": return state.workDuration * 60;
     case "break": return state.breakDuration * 60;
@@ -73,11 +109,13 @@ function getPhaseSeconds(phase: TimerPhase, state: Pick<FocusState, "workDuratio
   }
 }
 
-function getNextPhase(current: TimerPhase, currentRound: number, totalRounds: number): { phase: TimerPhase; round: number } {
+function getNextPhase(
+  current: TimerPhase,
+  currentRound: number,
+  totalRounds: number
+): { phase: TimerPhase; round: number } {
   if (current === "work") {
-    if (currentRound >= totalRounds) {
-      return { phase: "done", round: currentRound };
-    }
+    if (currentRound >= totalRounds) return { phase: "done", round: currentRound };
     return currentRound % 4 === 0
       ? { phase: "longBreak", round: currentRound }
       : { phase: "break", round: currentRound };
@@ -85,7 +123,9 @@ function getNextPhase(current: TimerPhase, currentRound: number, totalRounds: nu
   return { phase: "work", round: currentRound + 1 };
 }
 
-function createFocusStore(defaultRituals: Ritual[]) {
+// ─── Store factory ────────────────────────────────────────────────────────────
+
+function createFocusStore(zone: FocusZone) {
   return create<FocusState>((set, get) => ({
     workDuration: 25,
     breakDuration: 5,
@@ -98,13 +138,14 @@ function createFocusStore(defaultRituals: Ritual[]) {
     isRunning: false,
     intervalId: null,
 
-    rituals: defaultRituals.map((r) => ({ ...r })),
+    rituals: loadRituals(zone),
     allRitualsChecked: false,
 
-    setWorkDuration: (min) => set((s) => {
-      const seconds = s.phase === "idle" || s.phase === "work" ? min * 60 : s.secondsLeft;
-      return { workDuration: min, secondsLeft: seconds };
-    }),
+    setWorkDuration: (min) =>
+      set((s) => ({
+        workDuration: min,
+        secondsLeft: s.phase === "idle" || s.phase === "work" ? min * 60 : s.secondsLeft,
+      })),
     setBreakDuration: (min) => set({ breakDuration: min }),
     setLongBreakDuration: (min) => set({ longBreakDuration: min }),
     setTotalRounds: (rounds) => set({ totalRounds: rounds }),
@@ -112,15 +153,12 @@ function createFocusStore(defaultRituals: Ritual[]) {
     start: () => {
       const s = get();
       if (s.isRunning) return;
-
       let phase = s.phase;
       let seconds = s.secondsLeft;
-
       if (phase === "idle" || phase === "done") {
         phase = "work";
         seconds = s.workDuration * 60;
       }
-
       const id = setInterval(() => get().tick(), 1000);
       set({ phase, secondsLeft: seconds, isRunning: true, intervalId: id });
     },
@@ -145,14 +183,16 @@ function createFocusStore(defaultRituals: Ritual[]) {
 
     skip: () => {
       const s = get();
-      const { phase: nextPhase, round: nextRound } = getNextPhase(s.phase, s.currentRound, s.totalRounds);
-
+      const { phase: nextPhase, round: nextRound } = getNextPhase(
+        s.phase,
+        s.currentRound,
+        s.totalRounds
+      );
       if (nextPhase === "done") {
         if (s.intervalId) clearInterval(s.intervalId);
         set({ phase: "done", isRunning: false, intervalId: null, currentRound: nextRound });
         return;
       }
-
       const nextSeconds = getPhaseSeconds(nextPhase, s);
       set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
     },
@@ -160,8 +200,11 @@ function createFocusStore(defaultRituals: Ritual[]) {
     tick: () => {
       const s = get();
       if (s.secondsLeft <= 1) {
-        const { phase: nextPhase, round: nextRound } = getNextPhase(s.phase, s.currentRound, s.totalRounds);
-
+        const { phase: nextPhase, round: nextRound } = getNextPhase(
+          s.phase,
+          s.currentRound,
+          s.totalRounds
+        );
         if (nextPhase === "done") {
           if (s.intervalId) clearInterval(s.intervalId);
           set({ secondsLeft: 0, phase: "done", isRunning: false, intervalId: null, currentRound: nextRound });
@@ -170,35 +213,63 @@ function createFocusStore(defaultRituals: Ritual[]) {
           }
           return;
         }
-
         const nextSeconds = getPhaseSeconds(nextPhase, s);
         set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
-
         if (typeof window !== "undefined") {
           try { new Audio("/notification.mp3").play(); } catch {}
         }
         return;
       }
-
       set({ secondsLeft: s.secondsLeft - 1 });
     },
 
-    toggleRitual: (id) => set((s) => {
-      const rituals = s.rituals.map((r) =>
-        r.id === id ? { ...r, checked: !r.checked } : r
-      );
-      return { rituals, allRitualsChecked: rituals.every((r) => r.checked) };
-    }),
+    toggleRitual: (id) =>
+      set((s) => {
+        const rituals = s.rituals.map((r) =>
+          r.id === id ? { ...r, checked: !r.checked } : r
+        );
+        return { rituals, allRitualsChecked: rituals.every((r) => r.checked) };
+      }),
 
-    resetRituals: () => set({
-      rituals: defaultRituals.map((r) => ({ ...r })),
-      allRitualsChecked: false,
-    }),
+    resetRituals: () =>
+      set((s) => ({
+        rituals: s.rituals.map((r) => ({ ...r, checked: false })),
+        allRitualsChecked: false,
+      })),
+
+    addRitual: (label) => {
+      if (!label.trim()) return;
+      set((s) => {
+        const rituals = [...s.rituals, { id: generateId(), label: label.trim(), checked: false }];
+        saveRituals(zone, rituals);
+        return { rituals };
+      });
+    },
+
+    editRitual: (id, label) => {
+      if (!label.trim()) return;
+      set((s) => {
+        const rituals = s.rituals.map((r) =>
+          r.id === id ? { ...r, label: label.trim() } : r
+        );
+        saveRituals(zone, rituals);
+        return { rituals };
+      });
+    },
+
+    removeRitual: (id) => {
+      set((s) => {
+        const rituals = s.rituals.filter((r) => r.id !== id);
+        saveRituals(zone, rituals);
+        const allRitualsChecked = rituals.length > 0 && rituals.every((r) => r.checked);
+        return { rituals, allRitualsChecked };
+      });
+    },
   }));
 }
 
-export const useFocusMatinStore = createFocusStore(MATIN_RITUALS);
-export const useFocusSoirStore = createFocusStore(SOIR_RITUALS);
+export const useFocusMatinStore = createFocusStore("matin");
+export const useFocusSoirStore = createFocusStore("soir");
 
 export function useFocusStoreByZone(zone: FocusZone) {
   return zone === "matin" ? useFocusMatinStore : useFocusSoirStore;
