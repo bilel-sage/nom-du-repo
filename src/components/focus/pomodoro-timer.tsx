@@ -1,6 +1,6 @@
 "use client";
 
-import { type TimerPhase, type FocusZone, useFocusStoreByZone } from "@/stores/use-focus-store";
+import { type TimerPhase, type FocusZone, type FocusMode, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,10 +40,11 @@ function getPhaseRingColor(phase: TimerPhase): string {
 
 interface PomodoroTimerProps {
   zone: FocusZone;
+  modeKey: FocusMode;
 }
 
-export function PomodoroTimer({ zone }: PomodoroTimerProps) {
-  const useStore = useFocusStoreByZone(zone);
+export function PomodoroTimer({ zone, modeKey }: PomodoroTimerProps) {
+  const useStore = useFocusStoreByZone(zone, modeKey);
   const {
     phase, secondsLeft, currentRound, totalRounds,
     isRunning, workDuration, breakDuration,

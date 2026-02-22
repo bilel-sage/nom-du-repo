@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export const AGENDA_DAYS = [
   "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche",
@@ -14,9 +15,10 @@ export interface AgendaTask {
   agenda_type: AgendaType;
   day_index: number;
   text: string;
-  time?: string;      // heure de début (existant)
-  time_end?: string;  // heure de fin (nouveau)
+  time?: string;
+  time_end?: string;
   done: boolean;
+  mode: string;
 }
 
 // Compute human-readable duration from HH:MM start/end
@@ -61,9 +63,11 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
   fetchTasks: async () => {
     set({ loading: true });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("agenda_tasks")
       .select("*")
+      .eq("mode", mode)
       .order("created_at", { ascending: true });
     if (!error) set({ tasks: groupTasks((data ?? []) as AgendaTask[]) });
     set({ loading: false });
@@ -74,6 +78,7 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("agenda_tasks")
       .insert({
@@ -84,6 +89,7 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
         time: time ?? null,
         time_end: timeEnd ?? null,
         done: false,
+        mode,
       } as any)
       .select()
       .single();

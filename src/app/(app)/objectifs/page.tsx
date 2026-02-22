@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useObjectifsStore } from "@/stores/use-objectifs-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -99,8 +100,9 @@ function ObjectifDialog({
 
 export default function ObjectifsPage() {
   const { objectifs, loading, fetchObjectifs, addObjectif, toggleObjectif, deleteObjectif, editObjectif } = useObjectifsStore();
+  const { mode } = useModeStore();
 
-  useEffect(() => { fetchObjectifs(); }, [fetchObjectifs]);
+  useEffect(() => { fetchObjectifs(); }, [fetchObjectifs, mode]);
 
   const active = objectifs.filter((o) => !o.done).sort((a, b) => a.deadline.localeCompare(b.deadline));
   const done = objectifs.filter((o) => o.done);

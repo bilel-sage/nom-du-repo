@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useIdeesStore } from "@/stores/use-idees-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -69,8 +70,9 @@ function IdeeDialog({
 
 export default function IdeesPage() {
   const { idees, loading, fetchIdees, addIdee, editIdee, deleteIdee } = useIdeesStore();
+  const { mode } = useModeStore();
 
-  useEffect(() => { fetchIdees(); }, [fetchIdees]);
+  useEffect(() => { fetchIdees(); }, [fetchIdees, mode]);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">

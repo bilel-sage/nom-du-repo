@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccueilStore } from "@/stores/use-accueil-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -67,8 +68,9 @@ function NouvelleNoteDialog() {
 
 export default function AccueilPage() {
   const { notes, loading, fetchNotes, deleteNote } = useAccueilStore();
+  const { mode } = useModeStore();
 
-  useEffect(() => { fetchNotes(); }, [fetchNotes]);
+  useEffect(() => { fetchNotes(); }, [fetchNotes, mode]);
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto">

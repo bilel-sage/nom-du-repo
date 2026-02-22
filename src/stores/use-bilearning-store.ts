@@ -2,10 +2,12 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { useModeStore } from "@/stores/use-mode-store";
 
 // Table bilearning_articles (add columns if needed):
 // ALTER TABLE bilearning_articles ADD COLUMN IF NOT EXISTS is_read boolean NOT NULL DEFAULT false;
 // ALTER TABLE bilearning_articles ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'article';
+// ALTER TABLE bilearning_articles ADD COLUMN IF NOT EXISTS mode text DEFAULT 'learning';
 
 export type ArticleType = "article" | "script";
 
@@ -19,6 +21,7 @@ export interface Article {
   type: ArticleType;
   created_at: string;
   updated_at: string;
+  mode: string;
 }
 
 export type ArticleInsert = Pick<Article, "title" | "content" | "category" | "type">;
@@ -44,9 +47,11 @@ export const useBilearningStore = create<BilearningState>((set, get) => ({
   fetchArticles: async () => {
     set({ loading: true, error: null });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("bilearning_articles")
       .select("*")
+      .eq("mode", mode)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -58,6 +63,7 @@ export const useBilearningStore = create<BilearningState>((set, get) => ({
       ...row,
       is_read: row.is_read ?? false,
       type: (row.type as ArticleType) ?? "article",
+      mode: (row.mode as string) ?? "learning",
     })) as Article[];
     set({ articles: normalized, loading: false });
   },
@@ -67,6 +73,7 @@ export const useBilearningStore = create<BilearningState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("bilearning_articles")
       .insert({
@@ -76,6 +83,7 @@ export const useBilearningStore = create<BilearningState>((set, get) => ({
         category: article.category,
         type: article.type,
         is_read: false,
+        mode,
       } as any)
       .select()
       .single();
@@ -89,6 +97,7 @@ export const useBilearningStore = create<BilearningState>((set, get) => ({
       ...(row as any),
       is_read: row.is_read ?? false,
       type: (row.type as ArticleType) ?? "article",
+      mode: (row.mode as string) ?? "learning",
     };
     set((s) => ({ articles: [normalized, ...s.articles] }));
   },

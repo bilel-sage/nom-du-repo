@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { type FocusZone, useFocusStoreByZone } from "@/stores/use-focus-store";
+import { type FocusZone, type FocusMode, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,11 @@ import { cn } from "@/lib/utils";
 
 interface RitualChecklistProps {
   zone: FocusZone;
+  modeKey: FocusMode;
 }
 
-export function RitualChecklist({ zone }: RitualChecklistProps) {
-  const useStore = useFocusStoreByZone(zone);
+export function RitualChecklist({ zone, modeKey }: RitualChecklistProps) {
+  const useStore = useFocusStoreByZone(zone, modeKey);
   const { rituals, allRitualsChecked, toggleRitual, addRitual, editRitual, removeRitual } =
     useStore();
 

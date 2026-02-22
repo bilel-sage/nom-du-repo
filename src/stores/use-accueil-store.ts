@@ -2,11 +2,13 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export interface Note {
   id: string;
   text: string;
   created_at: string;
+  mode: string;
 }
 
 interface AccueilState {
@@ -24,9 +26,11 @@ export const useAccueilStore = create<AccueilState>((set, get) => ({
   fetchNotes: async () => {
     set({ loading: true });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("notes")
       .select("*")
+      .eq("mode", mode)
       .order("created_at", { ascending: false });
     if (!error) set({ notes: (data ?? []) as Note[] });
     set({ loading: false });
@@ -37,9 +41,10 @@ export const useAccueilStore = create<AccueilState>((set, get) => ({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("notes")
-      .insert({ user_id: user.id, text: text.trim() } as any)
+      .insert({ user_id: user.id, text: text.trim(), mode } as any)
       .select()
       .single();
     if (!error && data) set((s) => ({ notes: [data as Note, ...s.notes] }));

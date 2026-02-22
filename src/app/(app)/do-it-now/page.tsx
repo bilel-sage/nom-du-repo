@@ -2,16 +2,18 @@
 
 import { useEffect } from "react";
 import { useDoItNowStore } from "@/stores/use-doitnow-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import { TaskDialog } from "@/components/do-it-now/task-dialog";
 import { TaskCard } from "@/components/do-it-now/task-card";
 import { Timer, Loader2, Inbox } from "lucide-react";
 
 export default function DoItNowPage() {
   const { tasks, sessions, loading, activeTimer, fetchTasks, fetchSessions } = useDoItNowStore();
+  const { mode } = useModeStore();
 
   useEffect(() => {
     fetchTasks().then(() => fetchSessions(30));
-  }, [fetchTasks, fetchSessions]);
+  }, [fetchTasks, fetchSessions, mode]);
 
   const activeTask = activeTimer
     ? tasks.find((t) => t.id === activeTimer.taskId)

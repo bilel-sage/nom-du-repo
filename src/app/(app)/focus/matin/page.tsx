@@ -25,7 +25,7 @@ export default function FocusMatinPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr]">
         <div className="order-2 lg:order-1 rounded-xl border border-border bg-card p-5">
-          <RitualChecklist zone="matin" />
+          <RitualChecklist zone="matin" modeKey="learning" />
         </div>
 
         <div className="order-1 lg:order-2 flex justify-center">
@@ -35,12 +35,12 @@ export default function FocusMatinPage() {
               ? "border-amber-500/30 shadow-lg shadow-amber-500/5"
               : "border-border"
           )}>
-            <PomodoroTimer zone="matin" />
+            <PomodoroTimer zone="matin" modeKey="learning" />
           </div>
         </div>
 
         <div className="order-3 rounded-xl border border-border bg-card p-5">
-          <TimerSettings zone="matin" />
+          <TimerSettings zone="matin" modeKey="learning" />
         </div>
       </div>
     </div>

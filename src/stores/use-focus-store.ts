@@ -4,6 +4,7 @@ import { create } from "zustand";
 
 export type TimerPhase = "idle" | "work" | "break" | "done";
 export type FocusZone = "matin" | "soir";
+export type FocusMode = "learning" | "business";
 
 export interface Ritual {
   id: string;
@@ -29,10 +30,10 @@ const DEFAULT_SOIR: Omit<Ritual, "checked">[] = [
   { id: "s5", label: "Mettre un casque / musique de focus" },
 ];
 
-function loadRituals(zone: FocusZone): Ritual[] {
+function loadRituals(storageKey: string, zone: FocusZone): Ritual[] {
   if (typeof window === "undefined") return toRituals(zone === "matin" ? DEFAULT_MATIN : DEFAULT_SOIR);
   try {
-    const raw = localStorage.getItem(`focus-rituals-${zone}`);
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw) as Omit<Ritual, "checked">[];
       return parsed.map((r) => ({ ...r, checked: false }));
@@ -41,10 +42,10 @@ function loadRituals(zone: FocusZone): Ritual[] {
   return toRituals(zone === "matin" ? DEFAULT_MATIN : DEFAULT_SOIR);
 }
 
-function saveRituals(zone: FocusZone, rituals: Ritual[]) {
+function saveRituals(storageKey: string, rituals: Ritual[]) {
   if (typeof window === "undefined") return;
   const data = rituals.map(({ id, label }) => ({ id, label }));
-  localStorage.setItem(`focus-rituals-${zone}`, JSON.stringify(data));
+  localStorage.setItem(storageKey, JSON.stringify(data));
 }
 
 function toRituals(items: Omit<Ritual, "checked">[]): Ritual[] {
@@ -120,7 +121,7 @@ function getNextPhase(
 
 // ─── Store factory ────────────────────────────────────────────────────────────
 
-function createFocusStore(zone: FocusZone) {
+function createFocusStore(zone: FocusZone, storageKey: string) {
   return create<FocusState>((set, get) => ({
     workDuration: 25,
     breakDuration: 5,
@@ -132,7 +133,7 @@ function createFocusStore(zone: FocusZone) {
     isRunning: false,
     intervalId: null,
 
-    rituals: loadRituals(zone),
+    rituals: loadRituals(storageKey, zone),
     allRitualsChecked: false,
 
     setWorkDuration: (min) =>
@@ -234,7 +235,7 @@ function createFocusStore(zone: FocusZone) {
       if (!label.trim()) return;
       set((s) => {
         const rituals = [...s.rituals, { id: generateId(), label: label.trim(), checked: false }];
-        saveRituals(zone, rituals);
+        saveRituals(storageKey, rituals);
         return { rituals };
       });
     },
@@ -245,7 +246,7 @@ function createFocusStore(zone: FocusZone) {
         const rituals = s.rituals.map((r) =>
           r.id === id ? { ...r, label: label.trim() } : r
         );
-        saveRituals(zone, rituals);
+        saveRituals(storageKey, rituals);
         return { rituals };
       });
     },
@@ -253,7 +254,7 @@ function createFocusStore(zone: FocusZone) {
     removeRitual: (id) => {
       set((s) => {
         const rituals = s.rituals.filter((r) => r.id !== id);
-        saveRituals(zone, rituals);
+        saveRituals(storageKey, rituals);
         const allRitualsChecked = rituals.length > 0 && rituals.every((r) => r.checked);
         return { rituals, allRitualsChecked };
       });
@@ -261,9 +262,14 @@ function createFocusStore(zone: FocusZone) {
   }));
 }
 
-export const useFocusMatinStore = createFocusStore("matin");
-export const useFocusSoirStore = createFocusStore("soir");
+export const useFocusMatinStore         = createFocusStore("matin", "focus-rituals-matin-learning");
+export const useFocusSoirStore          = createFocusStore("soir",  "focus-rituals-soir-learning");
+export const useFocusMatinBusinessStore = createFocusStore("matin", "focus-rituals-matin-business");
+export const useFocusSoirBusinessStore  = createFocusStore("soir",  "focus-rituals-soir-business");
 
-export function useFocusStoreByZone(zone: FocusZone) {
+export function useFocusStoreByZone(zone: FocusZone, modeKey: FocusMode) {
+  if (modeKey === "business") {
+    return zone === "matin" ? useFocusMatinBusinessStore : useFocusSoirBusinessStore;
+  }
   return zone === "matin" ? useFocusMatinStore : useFocusSoirStore;
 }

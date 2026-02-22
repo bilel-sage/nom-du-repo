@@ -1,6 +1,6 @@
 "use client";
 
-import { type FocusZone, useFocusStoreByZone } from "@/stores/use-focus-store";
+import { type FocusZone, type FocusMode, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,10 +48,11 @@ function SettingRow({ label, value, unit, onDecrease, onIncrease, min, max }: Se
 
 interface TimerSettingsProps {
   zone: FocusZone;
+  modeKey: FocusMode;
 }
 
-export function TimerSettings({ zone }: TimerSettingsProps) {
-  const useStore = useFocusStoreByZone(zone);
+export function TimerSettings({ zone, modeKey }: TimerSettingsProps) {
+  const useStore = useFocusStoreByZone(zone, modeKey);
   const {
     workDuration, breakDuration, totalRounds, phase,
     setWorkDuration, setBreakDuration, setTotalRounds,

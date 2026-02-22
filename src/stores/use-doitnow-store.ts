@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { useModeStore } from "@/stores/use-mode-store";
 
 // Re-use the existing `skills` and `deepwork_sessions` tables.
 // XP columns are kept at 0 — no gamification logic here.
@@ -13,6 +14,7 @@ export interface Task {
   color: string;
   total_minutes: number;
   created_at: string;
+  mode: string;
 }
 
 export interface TaskSession {
@@ -70,9 +72,11 @@ export const useDoItNowStore = create<DoItNowState>((set, get) => ({
   fetchTasks: async () => {
     set({ loading: true, error: null });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("skills")
-      .select("id, user_id, name, color, total_minutes, created_at")
+      .select("id, user_id, name, color, total_minutes, created_at, mode")
+      .eq("mode", mode)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -105,6 +109,7 @@ export const useDoItNowStore = create<DoItNowState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("skills")
       .insert({
@@ -113,8 +118,9 @@ export const useDoItNowStore = create<DoItNowState>((set, get) => ({
         color: task.color ?? randomColor(),
         icon: "timer",
         stat_type: null,
+        mode,
       } as any)
-      .select("id, user_id, name, color, total_minutes, created_at")
+      .select("id, user_id, name, color, total_minutes, created_at, mode")
       .single();
 
     if (error) {

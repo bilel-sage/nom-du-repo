@@ -2,15 +2,17 @@
 
 import { useEffect } from "react";
 import { useTodoStore } from "@/stores/use-todo-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import { TodoList } from "@/components/todo/todo-list";
 import { CheckSquare, Loader2 } from "lucide-react";
 
 export default function TodoPage() {
   const { loading, fetchTodos, todos } = useTodoStore();
+  const { mode } = useModeStore();
 
   useEffect(() => {
     fetchTodos();
-  }, [fetchTodos]);
+  }, [fetchTodos, mode]);
 
   const pending = todos.filter((t) => !t.completed).length;
 

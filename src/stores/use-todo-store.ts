@@ -2,18 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
-
-// Requires a `todos` table in Supabase:
-// CREATE TABLE todos (
-//   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-//   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-//   text text NOT NULL,
-//   completed boolean DEFAULT false NOT NULL,
-//   created_at timestamptz DEFAULT now() NOT NULL
-// );
-// ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
-// CREATE POLICY "Users manage their own todos" ON todos
-//   USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+import { useModeStore } from "@/stores/use-mode-store";
 
 export interface Todo {
   id: string;
@@ -21,6 +10,7 @@ export interface Todo {
   text: string;
   completed: boolean;
   created_at: string;
+  mode: string;
 }
 
 interface TodoState {
@@ -43,9 +33,11 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   fetchTodos: async () => {
     set({ loading: true, error: null });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("todos")
       .select("*")
+      .eq("mode", mode)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -61,9 +53,10 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("todos")
-      .insert({ user_id: user.id, text: text.trim(), completed: false } as any)
+      .insert({ user_id: user.id, text: text.trim(), completed: false, mode } as any)
       .select()
       .single();
 

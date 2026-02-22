@@ -8,6 +8,7 @@ import {
   type AgendaType,
   type AgendaTask,
 } from "@/stores/use-agenda-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -367,7 +368,8 @@ const AGENDAS = [
 
 export default function AgendaPage() {
   const fetchTasks = useAgendaStore((s) => s.fetchTasks);
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  const { mode } = useModeStore();
+  useEffect(() => { fetchTasks(); }, [fetchTasks, mode]);
 
   const [active, setActive] = useState<AgendaType>("ecole");
   const current = AGENDAS.find((a) => a.id === active)!;

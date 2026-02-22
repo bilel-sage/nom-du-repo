@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useBilearningStore } from "@/stores/use-bilearning-store";
+import { useModeStore } from "@/stores/use-mode-store";
 import { ArticleDialog } from "@/components/bilearning/article-dialog";
 import { ArticleCard } from "@/components/bilearning/article-card";
 import {
@@ -21,13 +22,14 @@ type Tab = "articles" | "scripts";
 
 export default function BilearningPage() {
   const { articles, loading, fetchArticles } = useBilearningStore();
+  const { mode } = useModeStore();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("articles");
 
   useEffect(() => {
     fetchArticles();
-  }, [fetchArticles]);
+  }, [fetchArticles, mode]);
 
   const tabType = tab === "articles" ? "article" : "script";
   const tabItems = articles.filter((a) => a.type === tabType);

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
+import { useModeStore } from "@/stores/use-mode-store";
 
 export interface Objectif {
   id: string;
@@ -9,6 +10,7 @@ export interface Objectif {
   deadline: string;
   done: boolean;
   created_at: string;
+  mode: string;
 }
 
 interface ObjectifsState {
@@ -28,9 +30,11 @@ export const useObjectifsStore = create<ObjectifsState>((set, get) => ({
   fetchObjectifs: async () => {
     set({ loading: true });
     const supabase = createClient();
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("objectifs")
       .select("*")
+      .eq("mode", mode)
       .order("created_at", { ascending: true });
     if (!error) set({ objectifs: (data ?? []) as Objectif[] });
     set({ loading: false });
@@ -41,9 +45,10 @@ export const useObjectifsStore = create<ObjectifsState>((set, get) => ({
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const mode = useModeStore.getState().mode;
     const { data, error } = await supabase
       .from("objectifs")
-      .insert({ user_id: user.id, title: title.trim(), deadline, done: false } as any)
+      .insert({ user_id: user.id, title: title.trim(), deadline, done: false, mode } as any)
       .select()
       .single();
     if (!error && data) set((s) => ({ objectifs: [...s.objectifs, data as Objectif] }));
