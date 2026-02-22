@@ -13,7 +13,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut, Settings, GraduationCap, Briefcase } from "lucide-react";
+
+function DayModeBadge() {
+  const day = new Date().getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const isWeekend = day === 0 || day === 6;
+  if (isWeekend) {
+    return (
+      <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+        <Briefcase className="w-3 h-3" />
+        Mode Business
+      </span>
+    );
+  }
+  return (
+    <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+      <GraduationCap className="w-3 h-3" />
+      Mode Apprentissage
+    </span>
+  );
+}
 
 function getInitials(user: { email?: string; user_metadata?: { username?: string } } | null): string {
   if (!user) return "??";
@@ -38,6 +57,7 @@ export function Header() {
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border">
       <div className="flex items-center gap-3">
         <MobileNav />
+        <DayModeBadge />
       </div>
 
       <div className="flex items-center gap-2">

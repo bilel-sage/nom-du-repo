@@ -14,11 +14,25 @@ export interface AgendaTask {
   agenda_type: AgendaType;
   day_index: number;
   text: string;
-  time?: string;
+  time?: string;      // heure de début (existant)
+  time_end?: string;  // heure de fin (nouveau)
   done: boolean;
 }
 
-// UI helper: get tasks grouped by [agendaType][dayIndex]
+// Compute human-readable duration from HH:MM start/end
+export function computeDuration(start?: string, end?: string): string | null {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const totalMins = (eh * 60 + em) - (sh * 60 + sm);
+  if (totalMins <= 0) return null;
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
+
 function groupTasks(flat: AgendaTask[]): Record<AgendaType, AgendaTask[][]> {
   const result: Record<AgendaType, AgendaTask[][]> = {
     ecole:   Array.from({ length: 7 }, () => []),
@@ -34,8 +48,8 @@ interface AgendaState {
   tasks: Record<AgendaType, AgendaTask[][]>;
   loading: boolean;
   fetchTasks: () => Promise<void>;
-  addTask: (agenda: AgendaType, day: number, text: string, time?: string) => Promise<void>;
-  editTask: (agenda: AgendaType, day: number, taskId: string, text: string, time?: string) => Promise<void>;
+  addTask: (agenda: AgendaType, day: number, text: string, time?: string, timeEnd?: string) => Promise<void>;
+  editTask: (agenda: AgendaType, day: number, taskId: string, text: string, time?: string, timeEnd?: string) => Promise<void>;
   deleteTask: (agenda: AgendaType, day: number, taskId: string) => Promise<void>;
   toggleTask: (agenda: AgendaType, day: number, taskId: string) => Promise<void>;
 }
@@ -55,7 +69,7 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     set({ loading: false });
   },
 
-  addTask: async (agenda, day, text, time) => {
+  addTask: async (agenda, day, text, time, timeEnd) => {
     if (!text.trim()) return;
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +82,7 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
         day_index: day,
         text: text.trim(),
         time: time ?? null,
+        time_end: timeEnd ?? null,
         done: false,
       } as any)
       .select()
@@ -82,18 +97,18 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     }
   },
 
-  editTask: async (agenda, day, taskId, text, time) => {
+  editTask: async (agenda, day, taskId, text, time, timeEnd) => {
     if (!text.trim()) return;
     const supabase = createClient();
     const { error } = await supabase
       .from("agenda_tasks")
-      .update({ text: text.trim(), time: time ?? null } as any)
+      .update({ text: text.trim(), time: time ?? null, time_end: timeEnd ?? null } as any)
       .eq("id", taskId);
     if (!error) {
       set((s) => {
         const tasks = structuredClone(s.tasks);
         tasks[agenda][day] = tasks[agenda][day].map((t) =>
-          t.id === taskId ? { ...t, text: text.trim(), time } : t
+          t.id === taskId ? { ...t, text: text.trim(), time, time_end: timeEnd } : t
         );
         return { tasks };
       });

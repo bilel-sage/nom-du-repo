@@ -16,7 +16,6 @@ function getPhaseLabel(phase: TimerPhase): string {
     case "idle": return "Prêt";
     case "work": return "Focus";
     case "break": return "Pause";
-    case "longBreak": return "Pause longue";
     case "done": return "Session terminée";
   }
 }
@@ -25,7 +24,6 @@ function getPhaseColor(phase: TimerPhase): string {
   switch (phase) {
     case "work": return "text-primary";
     case "break": return "text-emerald-500";
-    case "longBreak": return "text-blue-500";
     case "done": return "text-amber-500";
     default: return "text-muted-foreground";
   }
@@ -35,7 +33,6 @@ function getPhaseRingColor(phase: TimerPhase): string {
   switch (phase) {
     case "work": return "stroke-primary";
     case "break": return "stroke-emerald-500";
-    case "longBreak": return "stroke-blue-500";
     case "done": return "stroke-amber-500";
     default: return "stroke-muted-foreground/30";
   }
@@ -49,14 +46,13 @@ export function PomodoroTimer({ zone }: PomodoroTimerProps) {
   const useStore = useFocusStoreByZone(zone);
   const {
     phase, secondsLeft, currentRound, totalRounds,
-    isRunning, workDuration, breakDuration, longBreakDuration,
+    isRunning, workDuration, breakDuration,
     start, pause, reset, skip,
   } = useStore();
 
   const totalSeconds =
     phase === "work" ? workDuration * 60
     : phase === "break" ? breakDuration * 60
-    : phase === "longBreak" ? longBreakDuration * 60
     : workDuration * 60;
 
   const progress = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;

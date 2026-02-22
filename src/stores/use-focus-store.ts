@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-export type TimerPhase = "idle" | "work" | "break" | "longBreak" | "done";
+export type TimerPhase = "idle" | "work" | "break" | "done";
 export type FocusZone = "matin" | "soir";
 
 export interface Ritual {
@@ -60,7 +60,6 @@ function generateId(): string {
 export interface FocusState {
   workDuration: number;
   breakDuration: number;
-  longBreakDuration: number;
   totalRounds: number;
 
   phase: TimerPhase;
@@ -75,7 +74,6 @@ export interface FocusState {
   // Timer settings
   setWorkDuration: (min: number) => void;
   setBreakDuration: (min: number) => void;
-  setLongBreakDuration: (min: number) => void;
   setTotalRounds: (rounds: number) => void;
 
   // Timer actions
@@ -99,12 +97,11 @@ export interface FocusState {
 
 function getPhaseSeconds(
   phase: TimerPhase,
-  state: Pick<FocusState, "workDuration" | "breakDuration" | "longBreakDuration">
+  state: Pick<FocusState, "workDuration" | "breakDuration">
 ): number {
   switch (phase) {
     case "work": return state.workDuration * 60;
     case "break": return state.breakDuration * 60;
-    case "longBreak": return state.longBreakDuration * 60;
     default: return 0;
   }
 }
@@ -116,9 +113,7 @@ function getNextPhase(
 ): { phase: TimerPhase; round: number } {
   if (current === "work") {
     if (currentRound >= totalRounds) return { phase: "done", round: currentRound };
-    return currentRound % 4 === 0
-      ? { phase: "longBreak", round: currentRound }
-      : { phase: "break", round: currentRound };
+    return { phase: "break", round: currentRound };
   }
   return { phase: "work", round: currentRound + 1 };
 }
@@ -129,7 +124,6 @@ function createFocusStore(zone: FocusZone) {
   return create<FocusState>((set, get) => ({
     workDuration: 25,
     breakDuration: 5,
-    longBreakDuration: 15,
     totalRounds: 4,
 
     phase: "idle",
@@ -147,7 +141,6 @@ function createFocusStore(zone: FocusZone) {
         secondsLeft: s.phase === "idle" || s.phase === "work" ? min * 60 : s.secondsLeft,
       })),
     setBreakDuration: (min) => set({ breakDuration: min }),
-    setLongBreakDuration: (min) => set({ longBreakDuration: min }),
     setTotalRounds: (rounds) => set({ totalRounds: rounds }),
 
     start: () => {

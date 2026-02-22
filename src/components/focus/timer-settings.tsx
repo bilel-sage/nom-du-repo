@@ -53,8 +53,8 @@ interface TimerSettingsProps {
 export function TimerSettings({ zone }: TimerSettingsProps) {
   const useStore = useFocusStoreByZone(zone);
   const {
-    workDuration, breakDuration, longBreakDuration, totalRounds, phase,
-    setWorkDuration, setBreakDuration, setLongBreakDuration, setTotalRounds,
+    workDuration, breakDuration, totalRounds, phase,
+    setWorkDuration, setBreakDuration, setTotalRounds,
   } = useStore();
 
   const disabled = phase !== "idle" && phase !== "done";
@@ -86,15 +86,6 @@ export function TimerSettings({ zone }: TimerSettingsProps) {
           max={15}
           onDecrease={() => setBreakDuration(breakDuration - 1)}
           onIncrease={() => setBreakDuration(breakDuration + 1)}
-        />
-        <SettingRow
-          label="Pause longue"
-          value={longBreakDuration}
-          unit="min"
-          min={5}
-          max={30}
-          onDecrease={() => setLongBreakDuration(longBreakDuration - 5)}
-          onIncrease={() => setLongBreakDuration(longBreakDuration + 5)}
         />
         <SettingRow
           label="Rounds"

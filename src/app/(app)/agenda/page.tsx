@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   useAgendaStore,
+  computeDuration,
   AGENDA_DAYS,
   type AgendaType,
   type AgendaTask,
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  CalendarDays, Plus, Trash2, Check, Pencil, GraduationCap, Briefcase,
+  CalendarDays, Plus, Trash2, Check, Pencil, GraduationCap, Briefcase, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,33 @@ const TIME_SLOTS: string[] = [];
 for (let h = 5; h <= 23; h++) {
   TIME_SLOTS.push(`${String(h).padStart(2, "0")}:00`);
   if (h < 23) TIME_SLOTS.push(`${String(h).padStart(2, "0")}:30`);
+}
+
+// ─── Time Picker ──────────────────────────────────────────────────────────────
+function TimePicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex-1 space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        <option value="none">— aucune —</option>
+        {TIME_SLOTS.map((t) => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 // ─── Add Task Dialog ──────────────────────────────────────────────────────────
@@ -41,13 +69,26 @@ function AddTaskDialog({
 }) {
   const addTask = useAgendaStore((s) => s.addTask);
   const [text, setText] = useState("");
-  const [time, setTime] = useState("none");
+  const [timeStart, setTimeStart] = useState("none");
+  const [timeEnd, setTimeEnd] = useState("none");
+
+  const duration = computeDuration(
+    timeStart !== "none" ? timeStart : undefined,
+    timeEnd !== "none" ? timeEnd : undefined
+  );
 
   const submit = () => {
     if (!text.trim()) return;
-    addTask(agenda, day, text, time === "none" ? undefined : time);
+    addTask(
+      agenda,
+      day,
+      text,
+      timeStart === "none" ? undefined : timeStart,
+      timeEnd === "none" ? undefined : timeEnd,
+    );
     setText("");
-    setTime("none");
+    setTimeStart("none");
+    setTimeEnd("none");
     onClose();
   };
 
@@ -55,32 +96,36 @@ function AddTaskDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Ajouter une tâche — {dayLabel}</DialogTitle>
+          <DialogTitle>Ajouter — {dayLabel}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>Tâche</Label>
+            <Label>Tâche / événement</Label>
             <Input
               autoFocus
-              placeholder="Ex: Révision mathématiques"
+              placeholder="Ex: Révision DevOps"
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
             />
           </div>
+
           <div className="space-y-2">
-            <Label>Heure (optionnel)</Label>
-            <select
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="none">— Sans heure —</option>
-              {TIME_SLOTS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <Label className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              Horaire (optionnel)
+            </Label>
+            <div className="flex gap-2">
+              <TimePicker label="Début" value={timeStart} onChange={setTimeStart} />
+              <TimePicker label="Fin" value={timeEnd} onChange={setTimeEnd} />
+            </div>
+            {duration && (
+              <p className="text-xs text-primary font-semibold">
+                Durée : {duration}
+              </p>
+            )}
           </div>
+
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" size="sm" onClick={onClose}>Annuler</Button>
             <Button size="sm" onClick={submit} disabled={!text.trim()}>Ajouter</Button>
@@ -107,11 +152,24 @@ function EditTaskDialog({
 }) {
   const editTask = useAgendaStore((s) => s.editTask);
   const [text, setText] = useState(task.text);
-  const [time, setTime] = useState(task.time ?? "none");
+  const [timeStart, setTimeStart] = useState(task.time ?? "none");
+  const [timeEnd, setTimeEnd] = useState(task.time_end ?? "none");
+
+  const duration = computeDuration(
+    timeStart !== "none" ? timeStart : undefined,
+    timeEnd !== "none" ? timeEnd : undefined
+  );
 
   const submit = () => {
     if (!text.trim()) return;
-    editTask(agenda, day, task.id, text, time === "none" ? undefined : time);
+    editTask(
+      agenda,
+      day,
+      task.id,
+      text,
+      timeStart === "none" ? undefined : timeStart,
+      timeEnd === "none" ? undefined : timeEnd,
+    );
     onClose();
   };
 
@@ -119,11 +177,11 @@ function EditTaskDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Modifier la tâche</DialogTitle>
+          <DialogTitle>Modifier</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>Tâche</Label>
+            <Label>Tâche / événement</Label>
             <Input
               autoFocus
               value={text}
@@ -132,17 +190,19 @@ function EditTaskDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label>Heure</Label>
-            <select
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="none">— Sans heure —</option>
-              {TIME_SLOTS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <Label className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              Horaire
+            </Label>
+            <div className="flex gap-2">
+              <TimePicker label="Début" value={timeStart} onChange={setTimeStart} />
+              <TimePicker label="Fin" value={timeEnd} onChange={setTimeEnd} />
+            </div>
+            {duration && (
+              <p className="text-xs text-primary font-semibold">
+                Durée : {duration}
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" size="sm" onClick={onClose}>Annuler</Button>
@@ -158,6 +218,8 @@ function EditTaskDialog({
 function TaskItem({ task, agenda, day }: { task: AgendaTask; agenda: AgendaType; day: number }) {
   const { toggleTask, deleteTask } = useAgendaStore();
   const [editOpen, setEditOpen] = useState(false);
+
+  const duration = computeDuration(task.time, task.time_end);
 
   return (
     <>
@@ -175,6 +237,10 @@ function TaskItem({ task, agenda, day }: { task: AgendaTask; agenda: AgendaType;
           {task.time && (
             <span className="text-[10px] text-primary font-semibold font-mono block leading-none mb-0.5">
               {task.time}
+              {task.time_end && ` → ${task.time_end}`}
+              {duration && (
+                <span className="ml-1.5 text-muted-foreground font-normal">({duration})</span>
+              )}
             </span>
           )}
           <span className={cn("text-xs leading-snug break-words", task.done && "line-through text-muted-foreground")}>
@@ -214,12 +280,19 @@ function DayColumn({ agenda, dayIndex, dayLabel }: { agenda: AgendaType; dayInde
   });
 
   const done = tasks.filter((t) => t.done).length;
+  const isWeekend = dayIndex >= 5;
 
   return (
     <>
-      <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden min-h-[160px]">
+      <div className={cn(
+        "flex flex-col rounded-xl border bg-card overflow-hidden min-h-[160px]",
+        isWeekend ? "border-amber-500/30" : "border-border"
+      )}>
         {/* Header */}
-        <div className="px-3 py-2.5 border-b border-border bg-muted/20 flex items-center justify-between gap-1">
+        <div className={cn(
+          "px-3 py-2.5 border-b flex items-center justify-between gap-1",
+          isWeekend ? "bg-amber-500/5 border-amber-500/20" : "bg-muted/20 border-border"
+        )}>
           <div>
             <p className="text-sm font-semibold">{dayLabel}</p>
             {tasks.length > 0 && (
@@ -306,7 +379,9 @@ export default function AgendaPage() {
           <CalendarDays className="w-6 h-6 text-primary" />
           Agenda
         </h1>
-        <p className="text-muted-foreground mt-1 text-sm">Planifiez votre semaine, type par type.</p>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Planifiez votre semaine avec heure de début et heure de fin.
+        </p>
       </div>
 
       {/* Tab switcher */}
