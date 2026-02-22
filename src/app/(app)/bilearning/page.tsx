@@ -29,7 +29,8 @@ export default function BilearningPage() {
     fetchArticles();
   }, [fetchArticles]);
 
-  const tabItems = articles.filter((a) => a.type === tab);
+  const tabType = tab === "articles" ? "article" : "script";
+  const tabItems = articles.filter((a) => a.type === tabType);
   const readCount = tabItems.filter((a) => a.is_read).length;
 
   const categories = Array.from(
@@ -44,9 +45,6 @@ export default function BilearningPage() {
     const matchesCategory = !activeCategory || a.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const articlesCount = articles.filter((a) => a.type === "articles").length;
-  const scriptsCount = articles.filter((a) => a.type === "script").length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
