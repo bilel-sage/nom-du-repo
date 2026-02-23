@@ -19,6 +19,9 @@ import {
   Briefcase,
   Flame,
   Clapperboard,
+  Radio,
+  Mic,
+  Youtube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -82,6 +85,14 @@ const LEARNING_GROUPS: NavGroupDef[] = [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
     ],
   },
+  {
+    label: "Médias",
+    icon: Radio,
+    items: [
+      { href: "/podcasts", label: "Podcasts", icon: Mic },
+      { href: "/youtube", label: "YouTube", icon: Youtube },
+    ],
+  },
 ];
 
 const BUSINESS_GROUPS: NavGroupDef[] = [
@@ -122,6 +133,14 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     icon: Clapperboard,
     items: [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
+    ],
+  },
+  {
+    label: "Médias",
+    icon: Radio,
+    items: [
+      { href: "/podcasts", label: "Podcasts", icon: Mic },
+      { href: "/youtube", label: "YouTube", icon: Youtube },
     ],
   },
 ];
