@@ -23,14 +23,14 @@ export default function FocusMatinPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr]">
-        <div className="order-2 lg:order-1 rounded-xl border border-border bg-card p-5">
+      <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_auto_1fr]">
+        <div className="order-2 lg:order-1 rounded-xl border border-border bg-card p-4 md:p-5">
           <RitualChecklist zone="matin" modeKey="learning" />
         </div>
 
         <div className="order-1 lg:order-2 flex justify-center">
           <div className={cn(
-            "rounded-2xl border bg-card p-8 md:p-10 transition-all",
+            "w-full rounded-2xl border bg-card p-4 sm:p-6 md:p-8 transition-all",
             isActive
               ? "border-amber-500/30 shadow-lg shadow-amber-500/5"
               : "border-border"
@@ -39,7 +39,7 @@ export default function FocusMatinPage() {
           </div>
         </div>
 
-        <div className="order-3 rounded-xl border border-border bg-card p-5">
+        <div className="order-3 rounded-xl border border-border bg-card p-4 md:p-5">
           <TimerSettings zone="matin" modeKey="learning" />
         </div>
       </div>

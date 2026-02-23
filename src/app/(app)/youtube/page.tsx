@@ -76,7 +76,7 @@ function ChannelAccordion({ channel }: { channel: YoutubeChannel }) {
               <p className="text-sm text-muted-foreground text-center py-4">Aucune vidéo disponible.</p>
             )}
             {channelVideos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-1">
                 {channelVideos.map((video) => (
                   <VideoCard key={video.id} video={video} />
                 ))}
@@ -299,7 +299,7 @@ export default function YoutubePage() {
                 <p className="text-xs">Cliquez sur le ♡ d'une vidéo pour l'ajouter.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {favVideos.map((v) => (
                   <VideoCard key={v.id} video={v} />
                 ))}
@@ -316,7 +316,7 @@ export default function YoutubePage() {
                 <p className="text-sm">Aucune vidéo regardée.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {historyVideos.map((v) => (
                   <VideoCard key={v.id} video={v} />
                 ))}

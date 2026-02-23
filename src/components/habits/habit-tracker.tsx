@@ -91,101 +91,158 @@ function CategorySection({
         </div>
       ) : (
         <>
-          {/* Day header row */}
-          <div
-            className="grid items-center border-b border-border bg-muted/10"
-            style={{ gridTemplateColumns: "1fr repeat(7, 44px) 72px" }}
-          >
-            <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Habitude
-            </div>
-            {days.map((d) => (
-              <div
-                key={d}
-                className={cn("text-center py-2", d === today && "bg-primary/5")}
-              >
-                <div className="text-[9px] text-muted-foreground uppercase">{getDayLabel(d)}</div>
-                <div className={cn(
-                  "text-[11px] font-semibold mt-0.5",
-                  d === today
-                    ? "text-primary bg-primary/10 rounded-full w-5 h-5 flex items-center justify-center mx-auto"
-                    : "text-muted-foreground"
-                )}>
-                  {getDayNumber(d)}
-                </div>
-              </div>
-            ))}
-            <div className="py-2 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Streak
-            </div>
-          </div>
-
-          {/* Habit rows */}
-          {habits.map((habit) => {
-            const streak = getStreakForHabit(habit.id);
-            return (
-              <div
-                key={habit.id}
-                className="group grid items-center border-b border-border last:border-b-0 hover:bg-accent/20 transition-colors"
-                style={{ gridTemplateColumns: "1fr repeat(7, 44px) 72px" }}
-              >
-                {/* Habit name */}
-                <div className="flex items-center gap-2.5 px-4 py-2.5 min-w-0">
+          {/* ── Mobile (<sm) : vue compacte — nom + checkbox aujourd'hui + streak ── */}
+          <div className="sm:hidden divide-y divide-border">
+            {habits.map((habit) => {
+              const streak = getStreakForHabit(habit.id);
+              const checked = isChecked(habit.id, today);
+              return (
+                <div
+                  key={habit.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent/20 transition-colors"
+                >
                   <div
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: habit.color }}
                   />
-                  <div className="min-w-0 flex-1">
-                    <InlineEdit id={habit.id} name={habit.name} />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium truncate block">{habit.name}</span>
+                    <span className="text-[10px] text-muted-foreground">Aujourd'hui</span>
                   </div>
+                  {/* Today checkbox */}
+                  <button
+                    onClick={() => toggleDay(habit.id, today)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all shrink-0",
+                      checked
+                        ? "text-white"
+                        : "border border-border hover:border-foreground/40"
+                    )}
+                    style={checked ? { backgroundColor: habit.color } : undefined}
+                  >
+                    {checked && <Check className="w-4 h-4" />}
+                  </button>
+                  {/* Streak */}
+                  <span className={cn(
+                    "flex items-center gap-0.5 text-xs font-bold w-10 justify-end shrink-0",
+                    streak >= 7 ? "text-amber-500" : "text-muted-foreground"
+                  )}>
+                    {streak > 0 && <Flame className={cn("w-3.5 h-3.5", streak >= 7 ? "text-amber-500" : "text-muted-foreground")} />}
+                    {streak > 0 ? streak : "—"}
+                  </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                    className="w-7 h-7 text-muted-foreground hover:text-destructive shrink-0"
                     onClick={() => deleteHabit(habit.id)}
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Day checkboxes */}
-                {days.map((d) => {
-                  const checked = isChecked(habit.id, d);
-                  return (
-                    <div
-                      key={d}
-                      className={cn("flex items-center justify-center py-2.5", d === today && "bg-primary/5")}
-                    >
-                      <button
-                        onClick={() => toggleDay(habit.id, d)}
-                        className={cn(
-                          "w-6 h-6 rounded-md flex items-center justify-center transition-all",
-                          checked
-                            ? "text-white"
-                            : "border border-border hover:border-foreground/40 hover:scale-105"
-                        )}
-                        style={checked ? { backgroundColor: habit.color } : undefined}
-                      >
-                        {checked && <Check className="w-3 h-3" />}
-                      </button>
+          {/* ── sm+ : grille 7 jours scrollable ── */}
+          <div className="hidden sm:block overflow-x-auto">
+            <div className="min-w-[540px]">
+              {/* Day header row */}
+              <div
+                className="grid items-center border-b border-border bg-muted/10"
+                style={{ gridTemplateColumns: "1fr repeat(7, 40px) 64px" }}
+              >
+                <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Habitude
+                </div>
+                {days.map((d) => (
+                  <div
+                    key={d}
+                    className={cn("text-center py-2", d === today && "bg-primary/5")}
+                  >
+                    <div className="text-[9px] text-muted-foreground uppercase">{getDayLabel(d)}</div>
+                    <div className={cn(
+                      "text-[11px] font-semibold mt-0.5",
+                      d === today
+                        ? "text-primary bg-primary/10 rounded-full w-5 h-5 flex items-center justify-center mx-auto"
+                        : "text-muted-foreground"
+                    )}>
+                      {getDayNumber(d)}
                     </div>
-                  );
-                })}
-
-                {/* Streak */}
-                <div className="flex items-center justify-center py-2.5">
-                  {streak > 0 ? (
-                    <span className={cn("flex items-center gap-0.5 text-xs font-bold", streak >= 7 ? "text-amber-500" : "text-muted-foreground")}>
-                      <Flame className={cn("w-3.5 h-3.5", streak >= 7 ? "text-amber-500" : "text-muted-foreground")} />
-                      {streak}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
+                  </div>
+                ))}
+                <div className="py-2 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Streak
                 </div>
               </div>
-            );
-          })}
+
+              {/* Habit rows */}
+              {habits.map((habit) => {
+                const streak = getStreakForHabit(habit.id);
+                return (
+                  <div
+                    key={habit.id}
+                    className="group grid items-center border-b border-border last:border-b-0 hover:bg-accent/20 transition-colors"
+                    style={{ gridTemplateColumns: "1fr repeat(7, 40px) 64px" }}
+                  >
+                    {/* Habit name */}
+                    <div className="flex items-center gap-2.5 px-4 py-2.5 min-w-0">
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: habit.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <InlineEdit id={habit.id} name={habit.name} />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => deleteHabit(habit.id)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+
+                    {/* Day checkboxes */}
+                    {days.map((d) => {
+                      const checked = isChecked(habit.id, d);
+                      return (
+                        <div
+                          key={d}
+                          className={cn("flex items-center justify-center py-2.5", d === today && "bg-primary/5")}
+                        >
+                          <button
+                            onClick={() => toggleDay(habit.id, d)}
+                            className={cn(
+                              "w-6 h-6 rounded-md flex items-center justify-center transition-all",
+                              checked
+                                ? "text-white"
+                                : "border border-border hover:border-foreground/40 hover:scale-105"
+                            )}
+                            style={checked ? { backgroundColor: habit.color } : undefined}
+                          >
+                            {checked && <Check className="w-3 h-3" />}
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Streak */}
+                    <div className="flex items-center justify-center py-2.5">
+                      {streak > 0 ? (
+                        <span className={cn("flex items-center gap-0.5 text-xs font-bold", streak >= 7 ? "text-amber-500" : "text-muted-foreground")}>
+                          <Flame className={cn("w-3.5 h-3.5", streak >= 7 ? "text-amber-500" : "text-muted-foreground")} />
+                          {streak}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
     </div>

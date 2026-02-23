@@ -67,12 +67,22 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent; /* retire le flash bleu au tap sur mobile */
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Scroll fluide sur iOS + évite le bounce horizontal */
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
   }
+
+  /* Conteneurs avec overflow-x-auto : scroll momentum iOS */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
 
   /* Smooth scrollbar for dark mode */
   ::-webkit-scrollbar {

@@ -350,13 +350,29 @@ function DayColumn({ agenda, dayIndex, dayLabel }: { agenda: AgendaType; dayInde
 // ─── Weekly Grid ──────────────────────────────────────────────────────────────
 function WeeklyGrid({ agenda }: { agenda: AgendaType }) {
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${AGENDA_DAYS.length}, minmax(145px, 1fr))`, minWidth: "1020px" }}>
+    <>
+      {/* Mobile (<sm): jours empilés verticalement */}
+      <div className="grid grid-cols-1 gap-3 sm:hidden">
         {AGENDA_DAYS.map((day, i) => (
           <DayColumn key={day} agenda={agenda} dayIndex={i} dayLabel={day} />
         ))}
       </div>
-    </div>
+
+      {/* sm+ : grille horizontale scrollable */}
+      <div className="hidden sm:block overflow-x-auto pb-2">
+        <div
+          className="grid gap-3"
+          style={{
+            gridTemplateColumns: `repeat(${AGENDA_DAYS.length}, minmax(130px, 1fr))`,
+            minWidth: "800px",
+          }}
+        >
+          {AGENDA_DAYS.map((day, i) => (
+            <DayColumn key={day} agenda={agenda} dayIndex={i} dayLabel={day} />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 

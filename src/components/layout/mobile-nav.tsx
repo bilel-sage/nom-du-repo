@@ -232,7 +232,7 @@ export function MobileNav() {
       </Sheet>
 
       {/* Bottom tab bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/80 backdrop-blur-xl border-t border-border">
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/80 backdrop-blur-xl border-t border-border" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <nav className="flex items-center justify-around h-16 px-1">
           {tabNav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

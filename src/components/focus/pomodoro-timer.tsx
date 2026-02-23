@@ -65,17 +65,16 @@ export function PomodoroTimer({ zone, modeKey }: PomodoroTimerProps) {
   const offset = circumference * (1 - progress);
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-6 w-full">
       <div className={cn("text-sm font-semibold uppercase tracking-widest", getPhaseColor(phase))}>
         {getPhaseLabel(phase)}
       </div>
 
-      <div className="relative" style={{ width: size, height: size }}>
+      {/* Conteneur responsive : max 280px, s'adapte aux petits écrans */}
+      <div className="relative w-full max-w-[280px] aspect-square mx-auto">
         <svg
-          width={size}
-          height={size}
-          className="-rotate-90"
           viewBox={`0 0 ${size} ${size}`}
+          className="w-full h-full -rotate-90"
         >
           <circle
             cx={size / 2}
@@ -100,7 +99,7 @@ export function PomodoroTimer({ zone, modeKey }: PomodoroTimerProps) {
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-6xl font-mono font-bold tracking-tight tabular-nums">
+          <span className="text-5xl sm:text-6xl font-mono font-bold tracking-tight tabular-nums">
             {formatTime(secondsLeft)}
           </span>
           <span className="text-xs text-muted-foreground mt-2">
