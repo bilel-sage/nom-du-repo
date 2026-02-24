@@ -18,9 +18,8 @@ import {
   Heart,
   History,
   Compass,
-  AlertCircle,
-  ExternalLink,
   Globe,
+  Rss,
 } from "lucide-react";
 
 type Tab = "decouvrir" | "favoris" | "historique";
@@ -31,9 +30,10 @@ function ChannelAccordion({ channel }: { channel: YoutubeChannel }) {
 
   const isLoading = loadingChannelId === channel.channelId;
   const channelVideos = videos[channel.channelId] ?? [];
+  const alreadyLoaded = videos[channel.channelId] !== undefined;
 
   const handleToggle = () => {
-    if (!open && !videos[channel.channelId]) {
+    if (!open && !alreadyLoaded) {
       loadVideos(channel.channelId);
     }
     setOpen(!open);
@@ -72,8 +72,15 @@ function ChannelAccordion({ channel }: { channel: YoutubeChannel }) {
                 <span className="ml-2 text-sm text-muted-foreground">Chargement des vidéos…</span>
               </div>
             )}
-            {!isLoading && channelVideos.length === 0 && videos[channel.channelId] !== undefined && (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucune vidéo disponible.</p>
+            {!isLoading && alreadyLoaded && channelVideos.length === 0 && (
+              <div className="text-center py-6 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Contenu temporairement indisponible.
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  Le flux RSS sera mis à jour automatiquement.
+                </p>
+              </div>
             )}
             {channelVideos.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-1">
@@ -99,7 +106,6 @@ export default function YoutubePage() {
     favorites,
     history,
     videos,
-    apiKeyMissing,
     selectedLanguage,
     setLanguage,
     resetLanguage,
@@ -114,10 +120,9 @@ export default function YoutubePage() {
     fetchHistory();
   }, []);
 
-  // Avoid SSR flash — wait for client hydration
   if (!hydrated) return null;
 
-  // Language selection screen
+  // ── Sélection langue ──────────────────────────────────────────────────────
   if (selectedLanguage === null) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6">
@@ -125,9 +130,13 @@ export default function YoutubePage() {
           <Youtube className="w-8 h-8 text-red-500" />
         </div>
         <h1 className="text-2xl font-bold mb-2">YouTube Productivité</h1>
-        <p className="text-muted-foreground text-sm mb-8 text-center">
+        <p className="text-muted-foreground text-sm mb-2 text-center">
           Choisissez votre langue pour accéder aux chaînes curatées.
         </p>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-8">
+          <Rss className="w-3.5 h-3.5" />
+          <span>Flux RSS officiel · Sans quota · Sans clé API</span>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
           <button
             onClick={() => setLanguage("fr")}
@@ -172,27 +181,27 @@ export default function YoutubePage() {
     .sort((a, b) => history.indexOf(a.id) - history.indexOf(b.id));
 
   return (
-    <div className="min-h-screen pb-8">
-      {/* Header */}
+    <div className="min-h-screen pb-24 lg:pb-8">
+      {/* Header sticky */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-500/10">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-500/10 shrink-0">
               <Youtube className="w-5 h-5 text-red-500" />
             </div>
-            <h1 className="text-xl font-bold flex-1">YouTube Productivité</h1>
+            <h1 className="text-xl font-bold flex-1 truncate">YouTube Productivité</h1>
             <button
               onClick={resetLanguage}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent shrink-0"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{selectedLanguage === "fr" ? "🇫🇷 FR" : "🇬🇧 EN"}</span>
-              <span className="opacity-60">· Changer</span>
+              <span className="opacity-60 hidden sm:inline">· Changer</span>
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto no-scrollbar">
             {(
               [
                 { id: "decouvrir", label: "Découvrir", icon: Compass },
@@ -204,7 +213,7 @@ export default function YoutubePage() {
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
                   activeTab === id
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -219,34 +228,10 @@ export default function YoutubePage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-        {/* API Key missing banner */}
-        {apiKeyMissing && (
-          <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
-            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                Clé API YouTube manquante
-              </p>
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-                Ajoutez <code className="bg-amber-500/20 px-1 rounded">YOUTUBE_API_KEY</code> dans
-                votre fichier <code className="bg-amber-500/20 px-1 rounded">.env.local</code> pour
-                charger les vidéos.
-              </p>
-              <a
-                href="https://console.cloud.google.com/apis/credentials"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 underline mt-1"
-              >
-                Obtenir une clé <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        )}
-
+        {/* ── Onglet Découvrir ── */}
         {activeTab === "decouvrir" && (
           <>
-            {/* Category pills */}
+            {/* Filtres catégorie */}
             <div className="flex flex-wrap gap-2">
               {categories.map((cat) => (
                 <button
@@ -264,7 +249,7 @@ export default function YoutubePage() {
               ))}
             </div>
 
-            {/* Channel accordions grouped by category */}
+            {/* Accordéons chaînes groupées par catégorie */}
             {activeCategory === "Tous" ? (
               <div className="space-y-6">
                 {categoriesWithChannels.map((cat) => (
@@ -290,6 +275,7 @@ export default function YoutubePage() {
           </>
         )}
 
+        {/* ── Onglet Favoris ── */}
         {activeTab === "favoris" && (
           <div>
             {favVideos.length === 0 ? (
@@ -308,6 +294,7 @@ export default function YoutubePage() {
           </div>
         )}
 
+        {/* ── Onglet Historique ── */}
         {activeTab === "historique" && (
           <div>
             {historyVideos.length === 0 ? (

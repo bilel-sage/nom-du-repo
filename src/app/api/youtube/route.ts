@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 export interface YoutubeVideo {
   id: string;
   title: string;
@@ -10,104 +11,114 @@ export interface YoutubeVideo {
   channelId: string;
 }
 
-function mapItems(items: any[], fallbackChannelId: string): YoutubeVideo[] {
-  return (items ?? [])
-    .filter((item: any) => item.id?.videoId)
-    .map((item: any) => ({
-      id: item.id.videoId,
-      title: item.snippet?.title ?? "",
-      description: item.snippet?.description ?? "",
-      thumbnail:
-        item.snippet?.thumbnails?.medium?.url ||
-        item.snippet?.thumbnails?.default?.url ||
-        "",
-      channelTitle: item.snippet?.channelTitle ?? "",
-      publishedAt: item.snippet?.publishedAt ?? "",
-      channelId: item.snippet?.channelId ?? fallbackChannelId,
-    }));
+// ── Cache mémoire serveur (20 min) ────────────────────────────────────────────
+const CACHE_TTL = 20 * 60 * 1000;
+const memCache = new Map<string, { videos: YoutubeVideo[]; ts: number }>();
+
+// ── Parsing Atom XML (format YouTube RSS officiel) ────────────────────────────
+function tag(xml: string, name: string): string {
+  const esc = name.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  const m = xml.match(new RegExp(`<${esc}[^>]*>([\\s\\S]*?)<\\/${esc}>`, "i"));
+  return m ? m[1].replace(/<[^>]+>/g, "").trim() : "";
 }
 
-async function searchYoutube(
-  apiKey: string,
-  params: Record<string, string>
-): Promise<YoutubeVideo[]> {
-  const qs = new URLSearchParams({ key: apiKey, part: "snippet", type: "video", ...params });
-  const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?${qs.toString()}`,
-    { next: { revalidate: 3600 } }
+function attrVal(xml: string, element: string, attribute: string): string {
+  const esc = element.replace(/[.+?^${}()|[\]\\]/g, "\\$&");
+  const m = xml.match(new RegExp(`<${esc}[^>]*\\s${attribute}="([^"]*)"`, "i"));
+  return m ? m[1] : "";
+}
+
+// ── Filtre anti-Shorts (titre uniquement — durée absente du flux RSS) ─────────
+function isShort(title: string): boolean {
+  const t = title.toLowerCase();
+  return (
+    t.includes("#shorts") ||
+    t.includes("#short") ||
+    /(?:^|\s)shorts(?:\s|$)/.test(t) ||
+    /(?:^|\s)short(?:\s|$)/.test(t)
   );
-  if (!res.ok) return [];
-  const json = await res.json();
-  return mapItems(json.items, params.channelId ?? "");
 }
 
-function mergeDeduped(a: YoutubeVideo[], b: YoutubeVideo[], max: number): YoutubeVideo[] {
-  const seen = new Set<string>();
-  const out: YoutubeVideo[] = [];
-  for (const v of [...a, ...b]) {
-    if (!seen.has(v.id)) {
-      seen.add(v.id);
-      out.push(v);
-    }
+function parseFeed(xml: string, fallbackChannelId: string): YoutubeVideo[] {
+  const videos: YoutubeVideo[] = [];
+  const entryRe = /<entry>([\s\S]*?)<\/entry>/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = entryRe.exec(xml)) !== null) {
+    const e = m[1];
+
+    const videoId = tag(e, "yt:videoId");
+    if (!videoId) continue;
+
+    const title = tag(e, "title");
+    if (!title || isShort(title)) continue;
+
+    const publishedAt = tag(e, "published");
+    const description = tag(e, "media:description");
+    const channelTitle = tag(e, "name"); // <author><name>
+    const channelId = tag(e, "yt:channelId") || fallbackChannelId;
+    const thumbnail =
+      attrVal(e, "media:thumbnail", "url") ||
+      `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+    videos.push({
+      id: videoId,
+      title,
+      description,
+      thumbnail,
+      channelTitle,
+      publishedAt,
+      channelId,
+    });
   }
-  return out
-    .sort((x, y) => new Date(y.publishedAt).getTime() - new Date(x.publishedAt).getTime())
-    .slice(0, max);
+
+  return videos;
 }
 
+// ── Fetch + cache ─────────────────────────────────────────────────────────────
+async function fetchChannelRSS(channelId: string): Promise<YoutubeVideo[]> {
+  const cached = memCache.get(channelId);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.videos;
+
+  const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Biproductive/1.0 RSS Reader" },
+      next: { revalidate: 1200 },
+    });
+
+    if (!res.ok) {
+      // Retourner données en cache si disponibles, sinon vide
+      return cached?.videos ?? [];
+    }
+
+    const xml = await res.text();
+    const videos = parseFeed(xml, channelId);
+
+    memCache.set(channelId, { videos, ts: Date.now() });
+    return videos;
+  } catch {
+    return cached?.videos ?? [];
+  }
+}
+
+// ── Route GET ─────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const channelId = searchParams.get("channelId");
-  const channelName = searchParams.get("channelName") || "";
-  const maxResults = parseInt(searchParams.get("maxResults") || "12", 10);
+  const channelId = new URL(req.url).searchParams.get("channelId");
 
   if (!channelId) {
     return NextResponse.json({ error: "Paramètre channelId manquant", videos: [] }, { status: 400 });
   }
 
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) {
+  const videos = await fetchChannelRSS(channelId);
+
+  if (videos.length === 0) {
     return NextResponse.json(
-      { error: "YOUTUBE_API_KEY manquante — configurez la clé dans .env.local", videos: [] },
+      { videos: [], message: "Contenu temporairement indisponible, mise à jour en cours." },
       { status: 200 }
     );
   }
 
-  try {
-    const half = Math.ceil(maxResults / 2);
-
-    // ── Étape 1 : channelId + filtre durée (exclut les Shorts)
-    const [medium, long] = await Promise.all([
-      searchYoutube(apiKey, { channelId, order: "date", maxResults: String(half), videoDuration: "medium" }),
-      searchYoutube(apiKey, { channelId, order: "date", maxResults: String(half), videoDuration: "long" }),
-    ]);
-    let videos = mergeDeduped(medium, long, maxResults);
-
-    // ── Étape 2 : channelId sans filtre durée (channel avec peu de longues vidéos)
-    if (videos.length === 0) {
-      videos = await searchYoutube(apiKey, {
-        channelId,
-        order: "date",
-        maxResults: String(maxResults),
-      });
-    }
-
-    // ── Étape 3 : recherche par nom de chaîne (channel ID incorrect ou introuvable)
-    if (videos.length === 0 && channelName) {
-      const byName = await searchYoutube(apiKey, {
-        q: channelName,
-        order: "relevance",
-        maxResults: String(maxResults),
-        videoDuration: "medium", // exclut encore les Shorts
-      });
-      videos = byName;
-    }
-
-    return NextResponse.json({ videos }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Erreur: ${err instanceof Error ? err.message : String(err)}`, videos: [] },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ videos });
 }

@@ -26,11 +26,14 @@ export interface Video {
 export const FR_CATEGORIES = ["Tous", "Éloquence/Bien parler", "Informatique/Dev", "Marketing/Vente", "Islam"];
 export const EN_CATEGORIES = ["Tous", "Public Speaking", "Informatics/Dev", "Marketing/Sales"];
 
+// ── Chaînes curatées — flux RSS officiel YouTube ──────────────────────────────
+// Format RSS : https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID
+// Minimum 3 chaînes par catégorie pour garantir du contenu (anti-vide)
 export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
-  // FR — Éloquence/Bien parler
+  // ── FR — Éloquence/Bien parler ────────────────────────────────────────────
   {
     id: "arte",
-    channelId: "UCaN7oKa4aIozIhPSI3z5t-A",
+    channelId: "UCwI-JbGNsojunnHbFAc0M4Q",
     name: "Arte",
     category: "Éloquence/Bien parler",
     language: "fr",
@@ -38,13 +41,22 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "ted-fr",
-    channelId: "UCH1Q_E9oBF5gFVhvBRlnXcA",
+    channelId: "UCUnem-K4HqlgQrOSch0_-Jw",
     name: "TED en Français",
     category: "Éloquence/Bien parler",
     language: "fr",
     description: "Conférences TED traduites et doublées en français.",
   },
-  // FR — Informatique/Dev
+  {
+    id: "heu-reka",
+    channelId: "UC7sXGI8p8PvKosLWagkK9wQ",
+    name: "Heu?reka",
+    category: "Éloquence/Bien parler",
+    language: "fr",
+    description: "Économie et rhétorique vulgarisées avec clarté.",
+  },
+
+  // ── FR — Informatique/Dev ─────────────────────────────────────────────────
   {
     id: "grafikart",
     channelId: "UCj_iGliGCkLcHSZ8eqVNPDQ",
@@ -55,7 +67,7 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "underscore",
-    channelId: "UCnT-TV9K3S9j2HlVBQP0LNA",
+    channelId: "UCWedHS9qKebauVIK2J7383g",
     name: "Underscore_",
     category: "Informatique/Dev",
     language: "fr",
@@ -63,16 +75,25 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "benjamin-code",
-    channelId: "UCLyKaHljDIAc5mOwt_6Wz5Q",
+    channelId: "UCLOAPb7ATQUs_nDs9ViLcMw",
     name: "Benjamin Code",
     category: "Informatique/Dev",
     language: "fr",
     description: "Apprendre à coder de manière pragmatique.",
   },
-  // FR — Marketing/Vente
+  {
+    id: "cocadmin",
+    channelId: "UCVRJ6D343dX-x730MRP8tNw",
+    name: "cocadmin",
+    category: "Informatique/Dev",
+    language: "fr",
+    description: "Linux, DevOps et administration système.",
+  },
+
+  // ── FR — Marketing/Vente ──────────────────────────────────────────────────
   {
     id: "yomi-denzel",
-    channelId: "UCrLK5vamMU9zOm8Xkx2yh4Q",
+    channelId: "UChgE6R4QauGAJAlYiJOcCGw",
     name: "Yomi Denzel",
     category: "Marketing/Vente",
     language: "fr",
@@ -80,30 +101,24 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "olivier-roland",
-    channelId: "UCqDBHgZ_3kFE3pNzKQAiRsA",
+    channelId: "UCvq4sennWMM5hxDKfxIoojg",
     name: "Olivier Roland",
     category: "Marketing/Vente",
     language: "fr",
     description: "Entrepreneuriat intelligent et business en ligne.",
   },
-  // FR — Islam
+
+  // ── FR — Islam ────────────────────────────────────────────────────────────
   {
     id: "bilal-tv",
-    channelId: "UCrWknaBHAqhqNI3xkUk3kBw",
+    channelId: "UCQL7lZQGpy014xJfgx3w3Wg",
     name: "Bilal TV",
     category: "Islam",
     language: "fr",
     description: "Contenu islamique éducatif en français.",
   },
-  {
-    id: "iqra-france",
-    channelId: "UCG-Wj4VWSEV9H8t7GlZ3hkw",
-    name: "Iqra France",
-    category: "Islam",
-    language: "fr",
-    description: "Émissions et conférences islamiques en français.",
-  },
-  // EN — Public Speaking
+
+  // ── EN — Public Speaking ──────────────────────────────────────────────────
   {
     id: "ted",
     channelId: "UCAuUUnT6oDeKwE6v1NGQxug",
@@ -128,10 +143,19 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
     language: "en",
     description: "Science-backed charisma and communication skills.",
   },
-  // EN — Informatics/Dev
+  {
+    id: "improvement-pill",
+    channelId: "UCBIt1VN5j37PVM8LLSuTTlw",
+    name: "Improvement Pill",
+    category: "Public Speaking",
+    language: "en",
+    description: "Self-improvement, habits and personal growth.",
+  },
+
+  // ── EN — Informatics/Dev ──────────────────────────────────────────────────
   {
     id: "fireship",
-    channelId: "UCVyRiMvfUNMA1UPlDPzG5Ow",
+    channelId: "UCsBjURrPoezykLs9EqgamOA",
     name: "Fireship",
     category: "Informatics/Dev",
     language: "en",
@@ -155,13 +179,22 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "theo-t3",
-    channelId: "UCbRP3rQMBeOzXiH8mFXcE5A",
+    channelId: "UCbRP3c757lWg9M-U7TyEkXA",
     name: "Theo – t3.gg",
     category: "Informatics/Dev",
     language: "en",
     description: "TypeScript, web dev, and startup insights.",
   },
-  // EN — Marketing/Sales
+  {
+    id: "kevin-powell",
+    channelId: "UCJZv4d5rbIKd4QHMPkcABCw",
+    name: "Kevin Powell",
+    category: "Informatics/Dev",
+    language: "en",
+    description: "CSS tips, layouts and frontend mastery.",
+  },
+
+  // ── EN — Marketing/Sales ──────────────────────────────────────────────────
   {
     id: "garyvee",
     channelId: "UCctXZhXmG-kf3tlIXgVZUlw",
@@ -172,14 +205,23 @@ export const YOUTUBE_CHANNELS: YoutubeChannel[] = [
   },
   {
     id: "alex-hormozi",
-    channelId: "UCRQkNr9GgLPPrfyANvZRlUQ",
+    channelId: "UCUyDOdBWhC1MCxEjC46d-zw",
     name: "Alex Hormozi",
     category: "Marketing/Sales",
     language: "en",
     description: "Business scaling, offers, and sales strategies.",
   },
+  {
+    id: "neil-patel",
+    channelId: "UCl-Zrl0QhF66lu1aGXaTbfw",
+    name: "Neil Patel",
+    category: "Marketing/Sales",
+    language: "en",
+    description: "SEO, digital marketing, and growth hacking.",
+  },
 ];
 
+// ── Store ─────────────────────────────────────────────────────────────────────
 interface YoutubeState {
   channels: YoutubeChannel[];
   videos: Record<string, Video[]>;
@@ -188,7 +230,6 @@ interface YoutubeState {
   favorites: string[];
   history: string[];
   activeCategory: string;
-  apiKeyMissing: boolean;
   selectedLanguage: "fr" | "en" | null;
 
   loadVideos: (channelId: string) => Promise<void>;
@@ -211,23 +252,14 @@ export const useYoutubeStore = create<YoutubeState>()(
       favorites: [],
       history: [],
       activeCategory: "Tous",
-      apiKeyMissing: false,
       selectedLanguage: null,
 
       loadVideos: async (channelId) => {
-        if (get().videos[channelId]) return; // cached
-        const channel = get().channels.find((c) => c.channelId === channelId);
-        const channelName = encodeURIComponent(channel?.name ?? "");
+        if (get().videos[channelId]) return; // déjà en cache client
         set({ loadingChannelId: channelId });
         try {
-          const res = await fetch(
-            `/api/youtube?channelId=${channelId}&channelName=${channelName}&maxResults=12`
-          );
+          const res = await fetch(`/api/youtube?channelId=${encodeURIComponent(channelId)}`);
           const data = await res.json();
-          if (data.error?.includes("YOUTUBE_API_KEY")) {
-            set({ apiKeyMissing: true, loadingChannelId: null });
-            return;
-          }
           set((s) => ({
             videos: { ...s.videos, [channelId]: data.videos ?? [] },
             loadingChannelId: null,
