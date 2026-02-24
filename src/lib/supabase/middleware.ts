@@ -33,8 +33,13 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Les routes API passent toujours sans redirection
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return supabaseResponse;
+  }
+
   // Public routes that don't require auth
-  const publicPaths = ["/login", "/signup", "/auth/callback", "/api/"];
+  const publicPaths = ["/login", "/signup", "/auth/callback"];
   const isPublicPath = publicPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
