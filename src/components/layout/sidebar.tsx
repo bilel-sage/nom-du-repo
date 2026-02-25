@@ -19,9 +19,11 @@ import {
   Briefcase,
   Flame,
   Clapperboard,
-  Radio,
-  Mic,
   Youtube,
+  BookOpen,
+  RefreshCw,
+  Globe,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -50,8 +52,9 @@ const LEARNING_GROUPS: NavGroupDef[] = [
     label: "Actions",
     icon: Zap,
     items: [
-      { href: "/todo",       label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
+      { href: "/todo",         label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",    label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes",  label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -79,6 +82,13 @@ const LEARNING_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
+    ],
+  },
+  {
     label: "Création Vidéo",
     icon: Clapperboard,
     items: [
@@ -87,10 +97,10 @@ const LEARNING_GROUPS: NavGroupDef[] = [
   },
   {
     label: "Médias",
-    icon: Radio,
+    icon: Youtube,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube", label: "YouTube", icon: Youtube },
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
     ],
   },
 ];
@@ -100,8 +110,9 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     label: "Actions",
     icon: Zap,
     items: [
-      { href: "/todo",       label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
+      { href: "/todo",         label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",    label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes",  label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -129,6 +140,13 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
+    ],
+  },
+  {
     label: "Création Vidéo",
     icon: Clapperboard,
     items: [
@@ -137,10 +155,10 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
   },
   {
     label: "Médias",
-    icon: Radio,
+    icon: Youtube,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube", label: "YouTube", icon: Youtube },
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
     ],
   },
 ];
@@ -195,7 +213,6 @@ function NavGroup({ label, icon: Icon, items, isCollapsed, isLearning, pathname 
     return <div key={item.href}>{linkContent}</div>;
   };
 
-  // Sidebar réduite — pas de toggle, juste les icônes
   if (isCollapsed) {
     return <div className="space-y-0.5">{items.map(renderLink)}</div>;
   }

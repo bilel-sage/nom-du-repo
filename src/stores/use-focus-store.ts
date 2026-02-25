@@ -12,7 +12,38 @@ export interface Ritual {
   checked: boolean;
 }
 
-// ─── localStorage helpers ────────────────────────────────────────────────────
+// ─── Audio helpers ────────────────────────────────────────────────────────────
+
+function playBeep(frequency = 880, duration = 0.4) {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = frequency;
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+    setTimeout(() => { try { ctx.close(); } catch {} }, (duration + 0.2) * 1000);
+  } catch {}
+}
+
+function sendNotification(title: string, body: string) {
+  if (typeof window === "undefined") return;
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body });
+    }
+  } catch {}
+}
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
 const DEFAULT_MATIN: Omit<Ritual, "checked">[] = [
   { id: "m1", label: "Préparer notes et cahier" },
@@ -44,8 +75,7 @@ function loadRituals(storageKey: string, zone: FocusZone): Ritual[] {
 
 function saveRituals(storageKey: string, rituals: Ritual[]) {
   if (typeof window === "undefined") return;
-  const data = rituals.map(({ id, label }) => ({ id, label }));
-  localStorage.setItem(storageKey, JSON.stringify(data));
+  localStorage.setItem(storageKey, JSON.stringify(rituals.map(({ id, label }) => ({ id, label }))));
 }
 
 function toRituals(items: Omit<Ritual, "checked">[]): Ritual[] {
@@ -56,7 +86,17 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-// ─── Store state ─────────────────────────────────────────────────────────────
+function loadWeeklyCompletions(key: string): string[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; }
+}
+
+function saveWeeklyCompletions(key: string, dates: string[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, JSON.stringify(dates));
+}
+
+// ─── Store state ──────────────────────────────────────────────────────────────
 
 export interface FocusState {
   workDuration: number;
@@ -72,6 +112,9 @@ export interface FocusState {
   rituals: Ritual[];
   allRitualsChecked: boolean;
 
+  showDonePopup: boolean;
+  weeklyCompletions: string[];
+
   // Timer settings
   setWorkDuration: (min: number) => void;
   setBreakDuration: (min: number) => void;
@@ -83,6 +126,10 @@ export interface FocusState {
   reset: () => void;
   skip: () => void;
   tick: () => void;
+
+  // Popup
+  setShowDonePopup: (v: boolean) => void;
+  markTodayComplete: () => void;
 
   // Ritual checklist
   toggleRitual: (id: string) => void;
@@ -122,6 +169,8 @@ function getNextPhase(
 // ─── Store factory ────────────────────────────────────────────────────────────
 
 function createFocusStore(zone: FocusZone, storageKey: string) {
+  const weeklyKey = `${storageKey}-weekly`;
+
   return create<FocusState>((set, get) => ({
     workDuration: 25,
     breakDuration: 5,
@@ -136,6 +185,9 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
     rituals: loadRituals(storageKey, zone),
     allRitualsChecked: false,
 
+    showDonePopup: false,
+    weeklyCompletions: loadWeeklyCompletions(weeklyKey),
+
     setWorkDuration: (min) =>
       set((s) => ({
         workDuration: min,
@@ -143,6 +195,18 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       })),
     setBreakDuration: (min) => set({ breakDuration: min }),
     setTotalRounds: (rounds) => set({ totalRounds: rounds }),
+
+    setShowDonePopup: (v) => set({ showDonePopup: v }),
+
+    markTodayComplete: () => {
+      const today = new Date().toISOString().split("T")[0];
+      const { weeklyCompletions } = get();
+      if (!weeklyCompletions.includes(today)) {
+        const updated = [...weeklyCompletions, today];
+        set({ weeklyCompletions: updated });
+        saveWeeklyCompletions(weeklyKey, updated);
+      }
+    },
 
     start: () => {
       const s = get();
@@ -152,6 +216,10 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       if (phase === "idle" || phase === "done") {
         phase = "work";
         seconds = s.workDuration * 60;
+      }
+      // Request notification permission on first start
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
       }
       const id = setInterval(() => get().tick(), 1000);
       set({ phase, secondsLeft: seconds, isRunning: true, intervalId: id });
@@ -172,45 +240,47 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
         currentRound: 1,
         isRunning: false,
         intervalId: null,
+        showDonePopup: false,
       });
     },
 
     skip: () => {
       const s = get();
-      const { phase: nextPhase, round: nextRound } = getNextPhase(
-        s.phase,
-        s.currentRound,
-        s.totalRounds
-      );
+      const { phase: nextPhase, round: nextRound } = getNextPhase(s.phase, s.currentRound, s.totalRounds);
       if (nextPhase === "done") {
         if (s.intervalId) clearInterval(s.intervalId);
-        set({ phase: "done", isRunning: false, intervalId: null, currentRound: nextRound });
+        get().markTodayComplete();
+        set({ phase: "done", isRunning: false, intervalId: null, currentRound: nextRound, showDonePopup: true });
+        playBeep(1046, 0.6); // high C
+        sendNotification("Session terminée !", "Discipline = liberté. Félicitations !");
         return;
       }
       const nextSeconds = getPhaseSeconds(nextPhase, s);
       set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
+      playBeep(nextPhase === "break" ? 660 : 880, 0.3);
     },
 
     tick: () => {
       const s = get();
       if (s.secondsLeft <= 1) {
-        const { phase: nextPhase, round: nextRound } = getNextPhase(
-          s.phase,
-          s.currentRound,
-          s.totalRounds
-        );
+        const { phase: nextPhase, round: nextRound } = getNextPhase(s.phase, s.currentRound, s.totalRounds);
         if (nextPhase === "done") {
           if (s.intervalId) clearInterval(s.intervalId);
-          set({ secondsLeft: 0, phase: "done", isRunning: false, intervalId: null, currentRound: nextRound });
-          if (typeof window !== "undefined") {
-            try { new Audio("/notification.mp3").play(); } catch {}
-          }
+          get().markTodayComplete();
+          set({ secondsLeft: 0, phase: "done", isRunning: false, intervalId: null, currentRound: nextRound, showDonePopup: true });
+          playBeep(1046, 0.8);
+          playBeep(880, 0.5);
+          sendNotification("Session terminée !", "Discipline = liberté. Félicitations !");
           return;
         }
         const nextSeconds = getPhaseSeconds(nextPhase, s);
         set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
-        if (typeof window !== "undefined") {
-          try { new Audio("/notification.mp3").play(); } catch {}
+        if (nextPhase === "break") {
+          playBeep(660, 0.4);
+          sendNotification("Pause !", `Pause de ${s.breakDuration} min. Repose-toi.`);
+        } else {
+          playBeep(880, 0.3);
+          sendNotification("Reprise !", `Round ${nextRound}. Concentration maximale.`);
         }
         return;
       }
@@ -219,9 +289,7 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
 
     toggleRitual: (id) =>
       set((s) => {
-        const rituals = s.rituals.map((r) =>
-          r.id === id ? { ...r, checked: !r.checked } : r
-        );
+        const rituals = s.rituals.map((r) => r.id === id ? { ...r, checked: !r.checked } : r);
         return { rituals, allRitualsChecked: rituals.every((r) => r.checked) };
       }),
 
@@ -243,9 +311,7 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
     editRitual: (id, label) => {
       if (!label.trim()) return;
       set((s) => {
-        const rituals = s.rituals.map((r) =>
-          r.id === id ? { ...r, label: label.trim() } : r
-        );
+        const rituals = s.rituals.map((r) => r.id === id ? { ...r, label: label.trim() } : r);
         saveRituals(storageKey, rituals);
         return { rituals };
       });
@@ -255,8 +321,7 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       set((s) => {
         const rituals = s.rituals.filter((r) => r.id !== id);
         saveRituals(storageKey, rituals);
-        const allRitualsChecked = rituals.length > 0 && rituals.every((r) => r.checked);
-        return { rituals, allRitualsChecked };
+        return { rituals, allRitualsChecked: rituals.length > 0 && rituals.every((r) => r.checked) };
       });
     },
   }));

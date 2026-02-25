@@ -17,9 +17,11 @@ import {
   Briefcase,
   Flame,
   Clapperboard,
-  Radio,
-  Mic,
   Youtube,
+  BookOpen,
+  RefreshCw,
+  Globe,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -41,11 +43,12 @@ interface NavGroupDef {
 
 const LEARNING_GROUPS: NavGroupDef[] = [
   {
-    label: "Médias",
-    icon: Radio,
+    label: "Actions",
+    icon: Zap,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube",  label: "YouTube",  icon: Youtube },
+      { href: "/todo",        label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",   label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes", label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -65,19 +68,18 @@ const LEARNING_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    label: "Actions",
-    icon: Zap,
-    items: [
-      { href: "/todo",      label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
-    ],
-  },
-  {
     label: "Clarté",
     icon: Lightbulb,
     items: [
       { href: "/idees",     label: "Idées",     icon: Lightbulb },
       { href: "/dashboard", label: "Vide Tête", icon: Home },
+    ],
+  },
+  {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
     ],
   },
   {
@@ -87,15 +89,24 @@ const LEARNING_GROUPS: NavGroupDef[] = [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
     ],
   },
+  {
+    label: "Médias",
+    icon: Youtube,
+    items: [
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
+    ],
+  },
 ];
 
 const BUSINESS_GROUPS: NavGroupDef[] = [
   {
-    label: "Médias",
-    icon: Radio,
+    label: "Actions",
+    icon: Zap,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube",  label: "YouTube",  icon: Youtube },
+      { href: "/todo",        label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",   label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes", label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -115,14 +126,6 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    label: "Actions",
-    icon: Zap,
-    items: [
-      { href: "/todo",      label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
-    ],
-  },
-  {
     label: "Clarté",
     icon: Lightbulb,
     items: [
@@ -131,10 +134,25 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
+    ],
+  },
+  {
     label: "Création Vidéo",
     icon: Clapperboard,
     items: [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
+    ],
+  },
+  {
+    label: "Médias",
+    icon: Youtube,
+    items: [
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
     ],
   },
 ];

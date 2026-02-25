@@ -17,11 +17,13 @@ import {
   Briefcase,
   Flame,
   Clapperboard,
-  Radio,
-  Mic,
   Youtube,
   Grid2X2,
   X,
+  BookOpen,
+  RefreshCw,
+  Globe,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useModeStore } from "@/stores/use-mode-store";
@@ -40,11 +42,12 @@ interface NavGroupDef {
 
 const LEARNING_GROUPS: NavGroupDef[] = [
   {
-    label: "Médias",
-    icon: Radio,
+    label: "Actions",
+    icon: Zap,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube",  label: "YouTube",  icon: Youtube },
+      { href: "/todo",        label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",   label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes", label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -64,19 +67,18 @@ const LEARNING_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    label: "Actions",
-    icon: Zap,
-    items: [
-      { href: "/todo",      label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
-    ],
-  },
-  {
     label: "Clarté",
     icon: Lightbulb,
     items: [
       { href: "/idees",     label: "Idées",     icon: Lightbulb },
       { href: "/dashboard", label: "Vide Tête", icon: Home },
+    ],
+  },
+  {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
     ],
   },
   {
@@ -86,15 +88,24 @@ const LEARNING_GROUPS: NavGroupDef[] = [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
     ],
   },
+  {
+    label: "Médias",
+    icon: Youtube,
+    items: [
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
+    ],
+  },
 ];
 
 const BUSINESS_GROUPS: NavGroupDef[] = [
   {
-    label: "Médias",
-    icon: Radio,
+    label: "Actions",
+    icon: Zap,
     items: [
-      { href: "/podcasts", label: "Podcasts", icon: Mic },
-      { href: "/youtube",  label: "YouTube",  icon: Youtube },
+      { href: "/todo",        label: "To Do",       icon: CheckSquare },
+      { href: "/do-it-now",   label: "Do It Now",   icon: Timer },
+      { href: "/recurrentes", label: "Récurrentes", icon: RefreshCw },
     ],
   },
   {
@@ -114,14 +125,6 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     ],
   },
   {
-    label: "Actions",
-    icon: Zap,
-    items: [
-      { href: "/todo",      label: "To Do",     icon: CheckSquare },
-      { href: "/do-it-now", label: "Do It Now", icon: Timer },
-    ],
-  },
-  {
     label: "Clarté",
     icon: Lightbulb,
     items: [
@@ -130,10 +133,25 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: "Culture",
+    icon: Library,
+    items: [
+      { href: "/culture/livres", label: "Livres", icon: BookOpen },
+    ],
+  },
+  {
     label: "Création Vidéo",
     icon: Clapperboard,
     items: [
       { href: "/bilearning", label: "Bilearning", icon: BookOpenText },
+    ],
+  },
+  {
+    label: "Médias",
+    icon: Youtube,
+    items: [
+      { href: "/youtube",      label: "YouTube",      icon: Youtube },
+      { href: "/social-media", label: "Social Media", icon: Globe },
     ],
   },
 ];
@@ -167,26 +185,22 @@ export function MobileBottomNav() {
 
   return (
     <>
-      {/* ── Bottom sheet "Plus" — rendu au niveau racine, hors du header ─── */}
+      {/* ── Bottom sheet "Plus" ─────────────────────────────────────────────── */}
       {showMore && (
         <div className="fixed inset-0 z-[80] lg:hidden">
-          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowMore(false)}
           />
 
-          {/* Sheet remontant du bas */}
           <div
             className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl shadow-2xl border-t border-border"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 4.5rem)" }}
           >
-            {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-border" />
             </div>
 
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-3">
               <span className="text-base font-bold">Toutes les pages</span>
               <button
@@ -197,7 +211,6 @@ export function MobileBottomNav() {
               </button>
             </div>
 
-            {/* Nav en grille par groupe */}
             <div className="overflow-y-auto max-h-[55vh] px-4 pb-2 space-y-5">
               {drawerGroups.map((group) => {
                 const GroupIcon = group.icon;
@@ -249,7 +262,7 @@ export function MobileBottomNav() {
         </div>
       )}
 
-      {/* ── Bottom tab bar ─────────────────────────────────────────────────── */}
+      {/* ── Bottom tab bar ──────────────────────────────────────────────────── */}
       <div
         className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card/95 backdrop-blur-xl border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -275,7 +288,6 @@ export function MobileBottomNav() {
             );
           })}
 
-          {/* Bouton Plus */}
           <button
             onClick={() => setShowMore(true)}
             className={cn(
