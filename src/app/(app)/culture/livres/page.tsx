@@ -5,26 +5,37 @@ import { useBooksStore, type Book } from "@/stores/use-books-store";
 import { BookCard } from "@/components/livres/book-card";
 import { BookDialog } from "@/components/livres/book-dialog";
 import { BookDetailModal } from "@/components/livres/book-detail-modal";
+import { BookActionChooser } from "@/components/livres/book-action-chooser";
+import { BookReader } from "@/components/livres/book-reader";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Plus, BookOpen, Loader2 } from "lucide-react";
 
 export default function LivresPage() {
   const { books, loading, error, fetchBooks } = useBooksStore();
   const [showAdd, setShowAdd] = useState(false);
   const [editBook, setEditBook] = useState<Book | null>(null);
-  const [detailBook, setDetailBook] = useState<Book | null>(null);
+  const [actionBook, setActionBook] = useState<Book | null>(null);
+  const [readingBook, setReadingBook] = useState<Book | null>(null);
+  const [approfondirBook, setApprofondirBook] = useState<Book | null>(null);
   const [filter, setFilter] = useState<"all" | "en_cours" | "termine">("all");
 
   useEffect(() => { fetchBooks(); }, [fetchBooks]);
 
-  // Sync detailBook with store updates
+  // Sync open modals with store updates
   useEffect(() => {
-    if (detailBook) {
-      const updated = books.find((b) => b.id === detailBook.id);
-      if (updated) setDetailBook(updated);
+    if (actionBook) {
+      const updated = books.find((b) => b.id === actionBook.id);
+      if (updated) setActionBook(updated);
     }
-  }, [books, detailBook]);
+    if (approfondirBook) {
+      const updated = books.find((b) => b.id === approfondirBook.id);
+      if (updated) setApprofondirBook(updated);
+    }
+    if (readingBook) {
+      const updated = books.find((b) => b.id === readingBook.id);
+      if (updated) setReadingBook(updated);
+    }
+  }, [books]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = filter === "all" ? books : books.filter((b) => b.status === filter);
   const enCours = books.filter((b) => b.status === "en_cours").length;
@@ -125,7 +136,7 @@ export default function LivresPage() {
             <BookCard
               key={book.id}
               book={book}
-              onOpen={(b) => setDetailBook(b)}
+              onAction={(b) => setActionBook(b)}
               onEdit={(b) => setEditBook(b)}
             />
           ))}
@@ -139,8 +150,25 @@ export default function LivresPage() {
       {editBook && (
         <BookDialog open={!!editBook} onClose={() => setEditBook(null)} book={editBook} />
       )}
-      {detailBook && (
-        <BookDetailModal book={detailBook} onClose={() => setDetailBook(null)} />
+      {actionBook && !readingBook && !approfondirBook && (
+        <BookActionChooser
+          book={actionBook}
+          onClose={() => setActionBook(null)}
+          onRead={() => {
+            setReadingBook(actionBook);
+            setActionBook(null);
+          }}
+          onApprofondir={() => {
+            setApprofondirBook(actionBook);
+            setActionBook(null);
+          }}
+        />
+      )}
+      {approfondirBook && (
+        <BookDetailModal book={approfondirBook} onClose={() => setApprofondirBook(null)} />
+      )}
+      {readingBook && (
+        <BookReader book={readingBook} onClose={() => setReadingBook(null)} />
       )}
     </div>
   );

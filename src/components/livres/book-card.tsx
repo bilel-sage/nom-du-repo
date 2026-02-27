@@ -4,19 +4,20 @@ import { useBooksStore, type Book } from "@/stores/use-books-store";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Trash2, Edit3, CheckCircle } from "lucide-react";
+import { BookOpen, Clock, Trash2, Edit3, CheckCircle, BookMarked } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BookCardProps {
   book: Book;
-  onOpen: (book: Book) => void;
+  onAction: (book: Book) => void;
   onEdit: (book: Book) => void;
 }
 
-export function BookCard({ book, onOpen, onEdit }: BookCardProps) {
+export function BookCard({ book, onAction, onEdit }: BookCardProps) {
   const { getDaysLeft, getDeadlineProgress, deleteBook } = useBooksStore();
   const daysLeft = getDaysLeft(book);
   const progress = getDeadlineProgress(book);
+  const readingPct = book.reading_progress?.percentage ?? 0;
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -31,7 +32,7 @@ export function BookCard({ book, onOpen, onEdit }: BookCardProps) {
   return (
     <div
       className="group rounded-2xl border border-border bg-card p-4 cursor-pointer hover:border-foreground/20 hover:shadow-sm transition-all"
-      onClick={() => onOpen(book)}
+      onClick={() => onAction(book)}
     >
       <div className="flex gap-3">
         {/* Couverture */}
@@ -76,6 +77,12 @@ export function BookCard({ book, onOpen, onEdit }: BookCardProps) {
             <Badge variant={book.status === "termine" ? "default" : "secondary"} className="text-[10px]">
               {book.status === "termine" ? "Terminé" : "En cours"}
             </Badge>
+            {book.epub_url && (
+              <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-400/50 gap-1">
+                <BookMarked className="w-2.5 h-2.5" />
+                ePub
+              </Badge>
+            )}
             {book.applied && (
               <div className="flex items-center gap-1 text-emerald-600">
                 <CheckCircle className="w-3 h-3" />
@@ -88,6 +95,17 @@ export function BookCard({ book, onOpen, onEdit }: BookCardProps) {
               </span>
             )}
           </div>
+
+          {/* Progression lecture */}
+          {readingPct > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">Lecture</span>
+                <span className="text-[10px] font-medium text-blue-600">{Math.round(readingPct)}%</span>
+              </div>
+              <Progress value={readingPct} className="h-1 [&>div]:bg-blue-500" />
+            </div>
+          )}
 
           {/* Deadline */}
           {book.deadline && (
