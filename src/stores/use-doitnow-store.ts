@@ -168,7 +168,7 @@ export const useDoItNowStore = create<DoItNowState>((set, get) => ({
 
     if (activeTimer.intervalId) clearInterval(activeTimer.intervalId);
 
-    const durationMin = Math.max(1, Math.round(activeTimer.elapsed / 60));
+    const durationMin = Math.max(1, Math.round((Date.now() - activeTimer.startedAt) / 1000 / 60));
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();

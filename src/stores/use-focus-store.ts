@@ -105,6 +105,10 @@ export interface FocusState {
 
   phase: TimerPhase;
   secondsLeft: number;
+  /** Total seconds of the current phase (used for progress ring + timestamp calc) */
+  phaseTotalSeconds: number;
+  /** When the current phase started (absolute ms timestamp). Null when paused. */
+  phaseStartTimestamp: number | null;
   currentRound: number;
   isRunning: boolean;
   intervalId: ReturnType<typeof setInterval> | null;
@@ -178,6 +182,8 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
 
     phase: "idle",
     secondsLeft: 25 * 60,
+    phaseTotalSeconds: 25 * 60,
+    phaseStartTimestamp: null,
     currentRound: 1,
     isRunning: false,
     intervalId: null,
@@ -192,6 +198,7 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       set((s) => ({
         workDuration: min,
         secondsLeft: s.phase === "idle" || s.phase === "work" ? min * 60 : s.secondsLeft,
+        phaseTotalSeconds: s.phase === "idle" || s.phase === "work" ? min * 60 : s.phaseTotalSeconds,
       })),
     setBreakDuration: (min) => set({ breakDuration: min }),
     setTotalRounds: (rounds) => set({ totalRounds: rounds }),
@@ -211,24 +218,33 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
     start: () => {
       const s = get();
       if (s.isRunning) return;
+
       let phase = s.phase;
-      let seconds = s.secondsLeft;
+      let totalSeconds = s.phaseTotalSeconds;
+      let remaining = s.secondsLeft;
+
       if (phase === "idle" || phase === "done") {
         phase = "work";
-        seconds = s.workDuration * 60;
+        totalSeconds = s.workDuration * 60;
+        remaining = totalSeconds;
       }
+
       // Request notification permission on first start
       if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
         Notification.requestPermission().catch(() => {});
       }
-      const id = setInterval(() => get().tick(), 1000);
-      set({ phase, secondsLeft: seconds, isRunning: true, intervalId: id });
+
+      // phaseStartTimestamp is calculated so that elapsed = totalSeconds - remaining
+      const phaseStartTimestamp = Date.now() - (totalSeconds - remaining) * 1000;
+
+      const id = setInterval(() => get().tick(), 500);
+      set({ phase, secondsLeft: remaining, phaseTotalSeconds: totalSeconds, phaseStartTimestamp, isRunning: true, intervalId: id });
     },
 
     pause: () => {
       const { intervalId } = get();
       if (intervalId) clearInterval(intervalId);
-      set({ isRunning: false, intervalId: null });
+      set({ isRunning: false, intervalId: null, phaseStartTimestamp: null });
     },
 
     reset: () => {
@@ -237,6 +253,8 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       set({
         phase: "idle",
         secondsLeft: workDuration * 60,
+        phaseTotalSeconds: workDuration * 60,
+        phaseStartTimestamp: null,
         currentRound: 1,
         isRunning: false,
         intervalId: null,
@@ -250,31 +268,37 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
       if (nextPhase === "done") {
         if (s.intervalId) clearInterval(s.intervalId);
         get().markTodayComplete();
-        set({ phase: "done", isRunning: false, intervalId: null, currentRound: nextRound, showDonePopup: true });
-        playBeep(1046, 0.6); // high C
+        set({ phase: "done", isRunning: false, intervalId: null, phaseStartTimestamp: null, currentRound: nextRound, showDonePopup: true });
+        playBeep(1046, 0.6);
         sendNotification("Session terminée !", "Discipline = liberté. Félicitations !");
         return;
       }
-      const nextSeconds = getPhaseSeconds(nextPhase, s);
-      set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
+      const nextTotalSeconds = getPhaseSeconds(nextPhase, s);
+      const phaseStartTimestamp = s.isRunning ? Date.now() : null;
+      set({ phase: nextPhase, secondsLeft: nextTotalSeconds, phaseTotalSeconds: nextTotalSeconds, phaseStartTimestamp, currentRound: nextRound });
       playBeep(nextPhase === "break" ? 660 : 880, 0.3);
     },
 
     tick: () => {
       const s = get();
-      if (s.secondsLeft <= 1) {
+      if (!s.isRunning || !s.phaseStartTimestamp) return;
+
+      const elapsed = (Date.now() - s.phaseStartTimestamp) / 1000;
+      const remaining = s.phaseTotalSeconds - elapsed;
+
+      if (remaining <= 0) {
         const { phase: nextPhase, round: nextRound } = getNextPhase(s.phase, s.currentRound, s.totalRounds);
         if (nextPhase === "done") {
           if (s.intervalId) clearInterval(s.intervalId);
           get().markTodayComplete();
-          set({ secondsLeft: 0, phase: "done", isRunning: false, intervalId: null, currentRound: nextRound, showDonePopup: true });
+          set({ secondsLeft: 0, phase: "done", isRunning: false, intervalId: null, phaseStartTimestamp: null, currentRound: nextRound, showDonePopup: true });
           playBeep(1046, 0.8);
           playBeep(880, 0.5);
           sendNotification("Session terminée !", "Discipline = liberté. Félicitations !");
           return;
         }
-        const nextSeconds = getPhaseSeconds(nextPhase, s);
-        set({ phase: nextPhase, secondsLeft: nextSeconds, currentRound: nextRound });
+        const nextTotalSeconds = getPhaseSeconds(nextPhase, s);
+        set({ phase: nextPhase, secondsLeft: nextTotalSeconds, phaseTotalSeconds: nextTotalSeconds, phaseStartTimestamp: Date.now(), currentRound: nextRound });
         if (nextPhase === "break") {
           playBeep(660, 0.4);
           sendNotification("Pause !", `Pause de ${s.breakDuration} min. Repose-toi.`);
@@ -284,7 +308,8 @@ function createFocusStore(zone: FocusZone, storageKey: string) {
         }
         return;
       }
-      set({ secondsLeft: s.secondsLeft - 1 });
+
+      set({ secondsLeft: Math.ceil(remaining) });
     },
 
     toggleRitual: (id) =>

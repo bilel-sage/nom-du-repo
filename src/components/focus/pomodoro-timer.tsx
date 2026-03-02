@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { type TimerPhase, type FocusZone, type FocusMode, useFocusStoreByZone } from "@/stores/use-focus-store";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, SkipForward } from "lucide-react";
@@ -121,14 +122,23 @@ export function PomodoroTimer({ zone, modeKey }: PomodoroTimerProps) {
     phase, secondsLeft, currentRound, totalRounds,
     isRunning, workDuration, breakDuration,
     weeklyCompletions,
-    start, pause, reset, skip,
+    start, pause, reset, skip, tick,
   } = useStore();
 
-  const totalSeconds =
-    phase === "work" ? workDuration * 60
-    : phase === "break" ? breakDuration * 60
-    : workDuration * 60;
+  // When the tab becomes visible again, immediately recalculate from the
+  // absolute timestamp so the display is accurate after backgrounding/sleep.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        tick();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [tick]);
 
+  const { phaseTotalSeconds } = useStore();
+  const totalSeconds = phaseTotalSeconds > 0 ? phaseTotalSeconds : workDuration * 60;
   const progress = totalSeconds > 0 ? (totalSeconds - secondsLeft) / totalSeconds : 0;
 
   const size = 280;

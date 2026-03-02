@@ -15,9 +15,11 @@ export default function TodoPage() {
   }, [fetchTodos, mode]);
 
   const pending = todos.filter((t) => !t.completed).length;
+  const perso = todos.filter((t) => !t.completed && t.category === "perso").length;
+  const pro   = todos.filter((t) => !t.completed && t.category === "pro").length;
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -26,7 +28,7 @@ export default function TodoPage() {
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
           {pending > 0
-            ? `${pending} tâche${pending > 1 ? "s" : ""} à faire`
+            ? `${perso} perso · ${pro} pro`
             : "Toutes les tâches sont complétées."}
         </p>
       </div>

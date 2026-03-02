@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Globe,
   Library,
+  CalendarCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/stores/use-sidebar-store";
@@ -54,6 +55,7 @@ const LEARNING_GROUPS: NavGroupDef[] = [
     items: [
       { href: "/todo",         label: "To Do",       icon: CheckSquare },
       { href: "/do-it-now",    label: "Do It Now",   icon: Timer },
+      { href: "/everyday",     label: "Everyday",    icon: CalendarCheck },
       { href: "/recurrentes",  label: "Récurrentes", icon: RefreshCw },
     ],
   },
@@ -112,6 +114,7 @@ const BUSINESS_GROUPS: NavGroupDef[] = [
     items: [
       { href: "/todo",         label: "To Do",       icon: CheckSquare },
       { href: "/do-it-now",    label: "Do It Now",   icon: Timer },
+      { href: "/everyday",     label: "Everyday",    icon: CalendarCheck },
       { href: "/recurrentes",  label: "Récurrentes", icon: RefreshCw },
     ],
   },
